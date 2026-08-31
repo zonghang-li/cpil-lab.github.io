@@ -184,7 +184,7 @@
                 <div class="blog-card__content">
                   <div class="blog-meta"><time datetime="2026-08-31">August 31, 2026</time></div>
                   <h2>Inside the PRIMA Hy4 770B Experiment</h2>
-                  <p>How two Linux machines, five GPUs, one 213.66 GiB GGUF, and a manually planned runtime served a 770B MoE model.</p>
+                  <p>How two Linux machines, five GPUs, and one 229 GB GGUF served a 770B MoE model through a two-rank PRIMA runtime.</p>
                   <span class="blog-card__link">Read note <b aria-hidden="true">→</b></span>
                 </div>
               </a>
@@ -214,13 +214,13 @@
             <header class="blog-post__header">
               <div class="blog-meta"><time datetime="2026-08-31">August 31, 2026</time></div>
               <h1 id="hy4-runbook-title">Inside the PRIMA Hy4 770B Experiment: How We Ran It Across Two Machines</h1>
-              <p>Two Linux machines, five GPUs, one 213.66 GiB GGUF, two ranks, and one OpenAI-compatible endpoint.</p>
+              <p>Two Linux machines, five GPUs, one 229 GB GGUF, two ranks, and one OpenAI-compatible endpoint.</p>
             </header>
 
             <div class="blog-post__body">
               <blockquote><strong>A performance result is only useful when the system behind it is inspectable. This is the deployment path behind PRIMA’s two-machine Hy4 770B experiment.</strong></blockquote>
 
-              <p>The <a href="./blog/hunyuan4-770b-local-devices" data-blog-post-link="hunyuan4-770b-local-devices">Hy4 770B case study</a> explains why we combined existing devices and what the experiment revealed about scalable local AI. This article focuses on the mechanics: what ran on each machine, how the model was validated and placed, which process started first, and how requests entered the system.</p>
+              <p>The <a href="./blog/hunyuan4-770b-local-devices" data-blog-post-link="hunyuan4-770b-local-devices">Hy4 770B case study</a> explains why we combined existing devices and what the experiment revealed about scalable local AI. This article focuses on the mechanics: what ran on each machine, how the model was validated and loaded across two ranks, which process started first, and how requests entered the system.</p>
 
               <p>The runtime layout and two-rank command structure are documented in the <a href="https://github.com/zonghang-li/prima.cpp/releases/tag/hy4-moe-preview-binaries" target="_blank" rel="noreferrer">Prima HY4 two-device serving preview</a>. It is an advanced compiled preview for this testbed. The current public open-source edition does not yet include this MoE path, and the linked August 27 package predates the STQ1_0 artifact used here.</p>
 
@@ -248,7 +248,7 @@
                 <table class="blog-table--wide">
                   <thead><tr><th scope="col">Package</th><th scope="col">Install on</th><th scope="col">Purpose</th></tr></thead>
                   <tbody>
-                    <tr><th scope="row"><code>prima-server-preview-a4000-rank0-linux-x86_64-cuda-runtime.tar.gz</code></th><td>Four-A4000 server</td><td>Rank-0 server, artifact-receipt tool, plan tool, and matching libraries</td></tr>
+                    <tr><th scope="row"><code>prima-server-preview-a4000-rank0-linux-x86_64-cuda-runtime.tar.gz</code></th><td>Four-A4000 server</td><td>Rank-0 server, artifact-receipt tool, and matching libraries</td></tr>
                     <tr><th scope="row"><code>prima-server-preview-4090-rank1-linux-x86_64-cuda-runtime.tar.gz</code></th><td>4090 Laptop</td><td>Rank-1 worker, artifact-receipt tool, and matching libraries</td></tr>
                   </tbody>
                 </table>
@@ -270,7 +270,7 @@ ldd ./bin/prima-server | sed -n '/not found/p'</code></pre>
 # expected:
 4d1d2259446e33e25c3e1d8bcb072f026cc69b90a361c5e5a8f6eca50d8d0036  Hy4-preview-STQ1_0.gguf</code></pre>
 
-              <p>The single file is 229,412,839,872 bytes, or 213.66 GiB. A complete, checksum-identical copy lived on fast local storage on <strong>both</strong> machines, and each launch command pointed <code>--model</code> at that local file.</p>
+              <p>The single file is 229,412,839,872 bytes, approximately 229 GB. A complete, checksum-identical copy lived on fast local storage on <strong>both</strong> machines, and each launch command pointed <code>--model</code> at that local file.</p>
 
               <p>This duplication was deliberate. Each rank read the weights assigned to it from its own storage. The cross-LAN link carried intermediate activations and control traffic, not a continuous stream of 200GB-plus model weights.</p>
 
@@ -290,7 +290,7 @@ ldd ./bin/prima-server | sed -n '/not found/p'</code></pre>
 
               <blockquote><strong>The linked August 27 binary release registers a different model adapter. Do not reuse that adapter ID or manifest for this STQ1_0 file. The runtime, adapter, and manifest must come from the matching STQ1_0-capable preview build.</strong></blockquote>
 
-              <h2>4. Probe the GPUs, then build one shared plan</h2>
+              <h2>4. Probe the GPUs on both ranks</h2>
 
               <p>Each rank captured its own local GPU topology. The A4000 process exposed four CUDA devices; the laptop exposed one.</p>
 
@@ -304,30 +304,7 @@ CUDA_VISIBLE_DEVICES=0 \
   ./bin/prima-server --moe-device-group CUDA0 \
   --moe-topology-probe &gt; rank1-topology.bin</code></pre>
 
-              <p>Rank 1’s receipt and topology file were copied to rank 0. The plan tool then created a single placement plan shared by both machines:</p>
-
-              <pre class="blog-code-block" aria-label="Create the shared HY4 manual placement plan"><code>./bin/prima-moe-plan create-v1 \
-  --adapter &lt;matching-STQ1_0-adapter-id&gt; \
-  --rank0-receipt rank0-receipt.prar \
-  --rank1-receipt rank1-receipt.prar \
-  --rank0-topology rank0-topology.bin \
-  --rank1-topology rank1-topology.bin \
-  --cut 61 \
-  --rank0-device-layers 15,15,15,16 \
-  --rank1-device-layers 17 \
-  --output manual-plan.bin</code></pre>
-
-              <div class="blog-table-wrap" role="region" aria-label="HY4 manual layer placement" tabindex="0">
-                <table>
-                  <thead><tr><th scope="col">Placement</th><th scope="col">Layers</th><th scope="col">Total</th></tr></thead>
-                  <tbody>
-                    <tr><th scope="row">Rank 0 · A4000 GPUs 0–3</th><td><code>15, 15, 15, 16</code></td><td>61</td></tr>
-                    <tr><th scope="row">Rank 1 · 4090 Laptop</th><td><code>17</code></td><td>17</td></tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <p>The cut at layer 61 assigned most layers to the four-card server and the remaining 17 to the laptop. Both ranks received the same <code>manual-plan.bin</code>, while keeping their own receipt and writable profile-cache path.</p>
+              <p>These probes verified local GPU visibility and captured the rank-specific topology before startup. Each machine kept its own topology artifact alongside its receipt and writable profile-cache path.</p>
 
               <h2>5. Start rank 1 before rank 0</h2>
 
@@ -354,7 +331,7 @@ CUDA_VISIBLE_DEVICES=0 \
               <ul>
                 <li><code>--model /path/to/Hy4-preview-STQ1_0.gguf</code>: load the same verified local model artifact on both ranks;</li>
                 <li><code>--load-mode mmap</code>: keep the model larger than aggregate fast memory and read cold pages from local storage;</li>
-                <li><code>--moe-hybrid manual</code> with <code>tiered-local-cold-hot-v1</code>: use the shared plan and split experts across GPU hot storage, host memory, and local SSD;</li>
+                <li><code>--moe-provider tiered-local-cold-hot-v1</code>: keep hot expert data on GPU while using host memory and local SSD for colder data;</li>
                 <li><code>--moe-routing-policy local-cold-no-remote-v1</code>: read a rank’s cold weights locally instead of fetching them from the other machine;</li>
                 <li><code>--ctx-size 8192 --batch-size 2 --ubatch-size 1 --parallel 1</code>: run one 8K-context request at a time;</li>
                 <li><code>--n-predict -1</code>: do not impose a server-side generation limit;</li>
@@ -362,7 +339,7 @@ CUDA_VISIBLE_DEVICES=0 \
                 <li><code>--no-warmup</code>: skip automatic warmup, then issue one explicit warmup request before measurement.</li>
               </ul>
 
-              <p>The release also enabled request-aware planning, hot-expert caching, precise prefetch, route-page prefetch and page-cache population, background staging, and asynchronous copy paths. The <a href="https://github.com/zonghang-li/prima.cpp/releases/tag/hy4-moe-preview-binaries" target="_blank" rel="noreferrer">release notes</a> remain the source of truth for the complete environment-variable and launch-command matrix.</p>
+              <p>The release also enabled request-aware scheduling, hot-expert caching, precise prefetch, route-page prefetch and page-cache population, background staging, and asynchronous copy paths. The <a href="https://github.com/zonghang-li/prima.cpp/releases/tag/hy4-moe-preview-binaries" target="_blank" rel="noreferrer">release notes</a> remain the source of truth for the complete environment-variable and launch-command matrix.</p>
 
               <h2>7. Warm once, then measure one request at a time</h2>
 
@@ -374,15 +351,15 @@ CUDA_VISIBLE_DEVICES=0 \
 
               <h2>Do not mix measurements from different runs</h2>
 
-              <p>The case study and Playground preserve a separately recorded experiment, while the binary release documents the reference behavior of its exact packaged runtime. A throughput number belongs to its binary, model revision, placement plan, prompt, cache state, storage, network, and measurement definition. Numbers from different runs should not be silently substituted for one another.</p>
+              <p>The case study and Playground preserve a separately recorded experiment, while the binary release documents the reference behavior of its exact packaged runtime. A throughput number belongs to its binary, model revision, prompt, cache state, storage, network, and measurement definition. Numbers from different runs should not be silently substituted for one another.</p>
 
-              <blockquote><strong>The reproducible unit is not “Hy4 on five GPUs.” It is the complete chain: artifacts, receipts, topology, placement plan, runtime settings, startup order, request, and timing method.</strong></blockquote>
+              <blockquote><strong>The reproducible unit is not “Hy4 on five GPUs.” It is the complete chain: artifacts, receipts, topology, runtime settings, startup order, request, and timing method.</strong></blockquote>
 
               <h2>What the preview proves—and what it does not</h2>
 
               <p>This is not a one-click installer or a general HY4 release. It expects the listed x86-64 Linux systems, NVIDIA drivers, matching CUDA and cuBLAS versions, access to the pinned model repository, sufficient local storage on both machines, working host-to-host networking, and a PRIMA preview build with the HY4 and STQ1_0 patches plus a matching artifact adapter.</p>
 
-              <p>What it does provide is an inspectable path from five heterogeneous GPUs on two machines to one client-facing API. The experiment’s central idea becomes concrete: no single device held the complete 770B model in fast memory, but each device contributed layers, VRAM, system memory, storage bandwidth, and compute to one planned runtime.</p>
+              <p>What it does provide is an inspectable path from five heterogeneous GPUs on two machines to one client-facing API. The experiment’s central idea becomes concrete: no single device held the complete 770B model in fast memory, but each device contributed layers, VRAM, system memory, storage bandwidth, and compute to one coordinated runtime.</p>
 
               <p>Use the <a href="https://github.com/zonghang-li/prima.cpp/releases/tag/hy4-moe-preview-binaries" target="_blank" rel="noreferrer">HY4 MoE preview release</a> for the two-rank orchestration, environment variables, ports, and complete launch-command structure. Replace its model-bound receipt, adapter, manifest, and <code>--model</code> value only with the corresponding files from a matching STQ1_0-capable build.</p>
             </div>
