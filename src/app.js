@@ -84,6 +84,7 @@ const routeNames = new Set(["home", "playground", "blog"]);
 const routeStorageKey = "prima-route";
 const blogPostStorageKey = "prima-blog-post";
 const blogPostTitles = new Map([
+  ["inside-hy4-770b-experiment", "Inside the PRIMA Hy4 770B Experiment: How We Ran It Across Two Machines"],
   ["workstation-already-in-room", "The workstation you need may already be in the room"],
   ["hunyuan4-770b-local-devices", "Scalability Matters More Than a Bigger Machine: What PRIMA’s Hy4 770B Experiment Reveals About Local AI"],
 ]);
