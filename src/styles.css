@@ -1109,7 +1109,7 @@ h3 {
 
 .blog-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
   gap: clamp(18px, 2.4vw, 32px);
   margin-top: clamp(40px, 6vh, 64px);
 }
@@ -1341,6 +1341,46 @@ h3 {
 
 .blog-post__body a:hover {
   color: var(--ink);
+}
+
+.blog-post__footnote {
+  display: block;
+  margin-top: clamp(54px, 8vh, 78px);
+  padding-top: 18px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.blog-post__footnote sup {
+  margin-right: 0.45em;
+  color: var(--orange);
+  font: 650 10px/1 "Geist Mono", monospace;
+}
+
+.blog-post__footnote a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--orange);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+}
+
+.blog-post__footnote a:hover {
+  color: var(--orange);
+}
+
+.blog-post__footnote [data-blog-footnote-copy="zh"] {
+  display: none;
+}
+
+[data-blog-language-root][lang="zh-CN"] .blog-post__footnote [data-blog-footnote-copy="en"] {
+  display: none;
+}
+
+[data-blog-language-root][lang="zh-CN"] .blog-post__footnote [data-blog-footnote-copy="zh"] {
+  display: inline;
 }
 
 .blog-post__body strong {
