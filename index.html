@@ -430,29 +430,27 @@ CUDA_VISIBLE_DEVICES=0 \
               <header class="blog-post__header">
                 <div class="blog-meta"><time datetime="2026-08-31">2026 年 8 月 31 日</time></div>
                 <h1 id="hy4-runbook-title-zh">PRIMA Hy4 770B 实验全记录：我们如何用两台机器运行它</h1>
-                <p>两台机器，异地、跨网、无线连接，总计 80 GB 显存, 64 GB RAM，把 Hy4 770B 跑到 1 TPS。</p>
+                <p>两台机器位于异地、分属不同网络并通过无线方式连接，合计使用 80 GB 显存和 64 GB 系统内存，将 Hy4 770B 跑到 1 TPS。</p>
               </header>
 
               <div class="blog-post__body">
-                <p><a href="./blog/hunyuan4-770b-local-devices" data-blog-post-link="hunyuan4-770b-local-devices">Hy4 770B 案例研究</a>解释了我们为何组合已有设备，以及这次实验揭示了可扩展本地 AI 的哪些可能。本文聚焦实际运行机制：每台机器运行什么、如何在两个 rank 上校验并加载模型、哪个进程先启动，以及请求如何进入系统。</p>
-
-                <p>下面完整记录了这套测试环境的双 rank 运行路径：每台机器使用的制品、模型校验、进程顺序、网络端口、运行设置和测量边界。</p>
+                <p><a href="./blog/hunyuan4-770b-local-devices" data-blog-post-link="hunyuan4-770b-local-devices">Hy4 770B 案例研究</a>解释了我们为何组合已有设备，以及这次实验揭示了可扩展本地 AI 的哪些可能。下面的流程记录了这套测试环境所使用的双 rank 运行路径。</p>
 
                 <h2>部署结构一览</h2>
 
                 <p>实验采用双 rank 静态拓扑。四卡 A4000 机器作为 rank 0，对外提供客户端 API；4090 Laptop 作为 rank 1，以第二个工作进程的身份加入。</p>
 
-                <div class="blog-table-wrap" role="region" aria-label="HY4 实验 rank 拓扑" tabindex="0">
+                <div class="blog-table-wrap" role="region" aria-label="完整的 HY4 实验设备配置" tabindex="0">
                   <table class="blog-table--wide">
-                    <thead><tr><th scope="col">Rank</th><th scope="col">机器</th><th scope="col">运行环境</th><th scope="col">职责</th></tr></thead>
+                    <thead><tr><th scope="col">Rank</th><th scope="col">操作系统 · 运行时</th><th scope="col">CPU · 系统内存</th><th scope="col">GPU · 显存</th><th scope="col">本地模型磁盘</th><th scope="col">网络 · 带宽</th><th scope="col">RTT</th></tr></thead>
                     <tbody>
-                      <tr><th scope="row">Rank 0</th><td>NVIDIA RTX A4000 16GB × 4</td><td>Ubuntu 24.04 · CUDA 12.x</td><td>主进程、四 GPU 执行，并在 18727 端口提供客户端 API</td></tr>
-                      <tr><th scope="row">Rank 1</th><td>NVIDIA RTX 4090 Laptop 16GB × 1</td><td>Ubuntu 22.04 · CUDA 13.x</td><td>第二个工作进程，首先启动并等待连接</td></tr>
+                      <tr><th scope="row">Rank 0 · 主进程</th><td>Ubuntu 24.04 · CUDA 12.x</td><td>Intel Core i7-12700 · 32 GB RAM</td><td>NVIDIA RTX A4000 × 4 · 每张 16 GB，共 64 GB</td><td>8 TB NVMe SSD</td><td>有线远端局域网 · 上下行 1 Gbps</td><td>≈ 50 ms</td></tr>
+                      <tr><th scope="row">Rank 1 · 工作进程</th><td>Ubuntu 22.04 · CUDA 13.x</td><td>Intel Core Ultra 9 185H · 32 GB RAM</td><td>NVIDIA RTX 4090 Laptop × 1 · 16 GB</td><td>2 TB NVMe SSD</td><td>Wi-Fi · VPN · 跨局域网 · 上行 27 Mbps / 下行 145 Mbps</td><td>≈ 50 ms</td></tr>
                     </tbody>
                   </table>
                 </div>
 
-                <p>每台机器约有 31GB 可用系统内存和高速本地存储。两台主机通过既有的 Wi-Fi、VPN 和远端局域网路径，使用主机间直连地址通信。PRIMA 只需要普通 IP 连接；跨网络链路本身需要在启动运行时之前配置完成。</p>
+                <p>每台机器均配备 32 GB 系统内存。两台主机通过既有的 Wi-Fi、VPN 和远端局域网路径，使用主机间直连地址通信。</p>
 
                 <h2>1. 为每个 rank 准备一个运行时软件包</h2>
 
@@ -462,34 +460,34 @@ CUDA_VISIBLE_DEVICES=0 \
                   <table class="blog-table--wide">
                     <thead><tr><th scope="col">软件包</th><th scope="col">安装位置</th><th scope="col">用途</th></tr></thead>
                     <tbody>
-                      <tr><th scope="row"><code>prima-server-preview-a4000-rank0-linux-x86_64-cuda-runtime.tar.gz</code></th><td>四卡 A4000 服务器</td><td>Rank 0 服务进程、制品凭据工具和配套库</td></tr>
-                      <tr><th scope="row"><code>prima-server-preview-4090-rank1-linux-x86_64-cuda-runtime.tar.gz</code></th><td>4090 Laptop</td><td>Rank 1 工作进程、制品凭据工具和配套库</td></tr>
+                      <tr><th scope="row"><code>prima-preview-a4000-rank0-linux-x86_64-cuda-runtime.tar.gz</code></th><td>四卡 A4000 服务器</td><td>Rank 0，主设备</td></tr>
+                      <tr><th scope="row"><code>prima-preview-4090-rank1-linux-x86_64-cuda-runtime.tar.gz</code></th><td>4090 Laptop</td><td>Rank 1，工作设备</td></tr>
                     </tbody>
                   </table>
                 </div>
 
-                <p>软件包包含已编译的 ELF 可执行文件、共享库和符号链接，不包含模型文件、源代码、安装脚本、NVIDIA 驱动、CUDA 或 cuBLAS。源代码归档不能替代任意一个针对特定 rank 的运行时软件包。</p>
+                <p>软件包包含已编译的 ELF 可执行文件、共享库和符号链接，不包含模型文件、源代码、安装脚本、NVIDIA 驱动、CUDA 或 cuBLAS。</p>
 
                 <pre class="blog-code-block" aria-label="校验下载的运行时软件包"><code>sha256sum &#45;c SHA256SUMS &#45;&#45;ignore-missing
 RANK=a4000-rank0 # 或 4090-rank1
-tar &#45;xzf "prima-server-preview-${RANK}-linux-x86_64-cuda-runtime.tar.gz"
+tar &#45;xzf "prima-preview-${RANK}-linux-x86_64-cuda-runtime.tar.gz"
 ldd ./bin/prima-server | sed &#45;n '/not found/p'</code></pre>
 
                 <p>最后一条命令不应输出任何内容。每个软件包中的 <code>bin/</code> 和 <code>lib/</code> 目录必须保持在一起，服务进程才能找到随包提供的库。</p>
 
                 <h2>2. 在两台机器上放置同一模型文件</h2>
 
-                <p>本文使用的模型文件是公开仓库 <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main" target="_blank" rel="noreferrer">AngelSlim/Hy4-preview-GGUF</a> 中的 <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/blob/main/Hy4-preview-STQ1_0.gguf" target="_blank" rel="noreferrer"><code>Hy4-preview-STQ1_0.gguf</code></a>，固定到修订版本 <code>7f10d3724b61b2e1d6e9207a0bd961768b7b30a1</code>。这是 1–2 bit 混合量化，平均每个权重约 2.38 bit。</p>
+                <p>本文使用的模型制品是公开 <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main" target="_blank" rel="noreferrer">AngelSlim/Hy4-preview-GGUF</a> 仓库中的 <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/blob/main/Hy4-preview-STQ1_0.gguf" target="_blank" rel="noreferrer"><code>Hy4-preview-STQ1_0.gguf</code></a>。这是 1–2 bit 混合量化，平均每个权重约 2.38 bit。</p>
 
                 <pre class="blog-code-block" aria-label="校验 HY4 STQ1 模型文件"><code>sha256sum Hy4-preview-STQ1_0.gguf
 # expected:
 4d1d2259446e33e25c3e1d8bcb072f026cc69b90a361c5e5a8f6eca50d8d0036  Hy4-preview-STQ1_0.gguf</code></pre>
 
-                <p>这个单文件包含 229,412,839,872 字节，约为 229 GB。两台机器的高速本地存储上各放置一份完整且校验和一致的副本，每条启动命令的 <code>&#45;&#45;model</code> 都指向本机文件。</p>
+                <p>这个单文件约为 229 GB。两台机器的高速本地存储上各放置一份完整且校验和一致的副本——由于每个 rank 只读取分配给自己的权重，后续版本会优化这项存储要求——每条启动命令的 <code>&#45;&#45;model</code> 都指向本机文件。</p>
 
-                <p>两份副本是刻意保留的。每个 rank 从自己的存储中读取分配给它的权重；跨局域网链路传输的是中间激活和控制流量，而不是持续传输超过 200GB 的模型权重。</p>
+                <p>跨局域网链路传输的是中间激活和控制流量，而不是持续传输超过 200 GB 的模型权重。</p>
 
-                <h2>3. 将制品绑定到各自机器</h2>
+                <h2>3. 在每台机器上校验并绑定一次模型</h2>
 
                 <p>每台机器都根据这个 STQ1_0 制品的清单生成自己的凭据。凭据会把仓库修订版本、文件名、字节大小、SHA-256 值和本地模型根目录，绑定到运行相应 rank 的机器。</p>
 
@@ -503,7 +501,18 @@ ldd ./bin/prima-server | sed &#45;n '/not found/p'</code></pre>
 
                 <p>4090 机器使用 <code>&#45;&#45;output rank1-receipt.prar</code> 执行相同校验。这样，模型文件复制不完整或内容错误时会尽早失败，而不会在后续产生含糊的运行时错误。</p>
 
-                <blockquote><strong>运行时适配器和清单必须与这个 STQ1_0 制品完全匹配。不要复用为其他模型文件或量化格式准备的适配器 ID 或清单。</strong></blockquote>
+                <p>各命令选项的作用如下：</p>
+
+                <ul>
+                  <li><code>create-v1</code> 创建版本 1 的机器本地制品凭据；</li>
+                  <li><code>&#45;&#45;adapter-id</code> 选择 PRIMA 针对该模型的 STQ1_0 适配器；</li>
+                  <li><code>&#45;&#45;repository</code> 和 <code>&#45;&#45;revision</code> 固定模型来源及不可变的仓库修订版本；</li>
+                  <li><code>&#45;&#45;manifest</code> 提供预期的文件名、字节大小和 SHA-256 身份信息；</li>
+                  <li><code>&#45;&#45;model-root</code> 指向包含 GGUF 的本地目录；</li>
+                  <li><code>&#45;&#45;output</code> 写出本机在启动时传给 <code>prima-server</code> 的凭据。</li>
+                </ul>
+
+                <p>每台机器只需生成一次凭据；只要模型文件及其本地路径不变，就可以重复使用。移动、替换或重新下载模型后，需要生成新的凭据。</p>
 
                 <h2>4. 探测两个 rank 的 GPU</h2>
 
@@ -561,64 +570,72 @@ CUDA_VISIBLE_DEVICES=0 \
 
                 <p>这个工具不会自动搜索最快的放置方案。它会确认两个凭据指向同一模型制品和适配器，检查两端记录的 GPU 拓扑，验证人工选择的切分点与各 GPU 层数，并写出二进制 plan。这些参数只对应本测试环境，硬件变化后需要重新决定放置方式。把生成的同一份 plan 原样复制到 rank 1；两个 rank 启动时都通过 <code>&#45;&#45;moe-manual-plan</code> 指向各自的本地副本。</p>
 
-                <h2>6. 先启动 rank 1，再启动 rank 0</h2>
+                <h2>6. 启动 rank 0 和 rank 1</h2>
 
                 <p>两个进程组成一个环，每个 rank 各有一个数据端口和一个信号端口。Rank 1 先使用 <code>&#45;&#45;worker-ready-listener</code> 启动；随后 rank 0 以 <code>&#45;&#45;head &#45;&#45;world 2</code> 启动。</p>
 
                 <div class="blog-table-wrap" role="region" aria-label="HY4 双 rank 网络端口与启动顺序" tabindex="0">
                   <table class="blog-table--wide">
-                    <thead><tr><th scope="col">顺序</th><th scope="col">Rank</th><th scope="col">本机 Ring 端口</th><th scope="col"><code>&#45;&#45;next</code></th><th scope="col">HTTP API</th></tr></thead>
+                    <thead><tr><th scope="col">顺序</th><th scope="col">Rank</th><th scope="col">本机 Ring 端口</th><th scope="col"><code>&#45;&#45;next</code></th></tr></thead>
                     <tbody>
-                      <tr><th scope="row">1</th><td>Rank 1 · 4090</td><td>数据 19868 · 信号 20895</td><td><code>A4000_HOST:19867:20894</code></td><td><code>127.0.0.1:18728</code></td></tr>
-                      <tr><th scope="row">2</th><td>Rank 0 · A4000</td><td>数据 19867 · 信号 20894</td><td><code>RANK1_HOST:19868:20895</code></td><td><code>0.0.0.0:18727</code></td></tr>
+                      <tr><th scope="row">1</th><td>Rank 1 · 4090</td><td>数据 19868 · 信号 20895</td><td><code>A4000_HOST:19867:20894</code></td></tr>
+                      <tr><th scope="row">2</th><td>Rank 0 · A4000</td><td>数据 19867 · 信号 20894</td><td><code>RANK1_HOST:19868:20895</code></td></tr>
                     </tbody>
                   </table>
                 </div>
 
-                <p>主机之间必须能访问这四个 Ring 端口。只有 rank 0 对外服务，客户端请求端点为：</p>
+                <p>先在 4090 Laptop 上启动 rank 1：</p>
+
+                <pre class="blog-code-block" aria-label="在 4090 Laptop 上启动 HY4 rank 1"><code>CUDA_VISIBLE_DEVICES=0 ./bin/prima-server \
+  &#45;&#45;model /path/to/Hy4-preview-STQ1_0.gguf \
+  &#45;&#45;moe-provider tiered-local-cold-hot-v1 \
+  &#45;&#45;moe-model-adapter hyv4-preview-stq1-0-v1 \
+  &#45;&#45;moe-routing-policy local-cold-no-remote-v1 \
+  &#45;&#45;moe-artifact-receipt rank1-receipt.prar \
+  &#45;&#45;moe-profile-cache rank1-profile-cache.bin \
+  &#45;&#45;moe-manual-plan /path/to/hy4-two-rank-plan.prmp \
+  &#45;&#45;device CUDA0 &#45;&#45;split-mode layer &#45;&#45;moe-device-group CUDA0 \
+  &#45;&#45;next A4000_HOST:19867:20894 \
+  &#45;&#45;data-port 19868 &#45;&#45;signal-port 20895 \
+  &#45;&#45;ctx-size 8192 \
+  &#45;&#45;worker-ready-listener</code></pre>
+
+                <p>然后在四卡 A4000 服务器上启动 rank 0：</p>
+
+                <pre class="blog-code-block" aria-label="在四卡 A4000 服务器上启动 HY4 rank 0"><code>CUDA_VISIBLE_DEVICES=0,1,2,3 ./bin/prima-server \
+  &#45;&#45;model /path/to/Hy4-preview-STQ1_0.gguf \
+  &#45;&#45;moe-provider tiered-local-cold-hot-v1 \
+  &#45;&#45;moe-model-adapter hyv4-preview-stq1-0-v1 \
+  &#45;&#45;moe-routing-policy local-cold-no-remote-v1 \
+  &#45;&#45;moe-artifact-receipt rank0-receipt.prar \
+  &#45;&#45;moe-profile-cache rank0-profile-cache.bin \
+  &#45;&#45;moe-manual-plan /path/to/hy4-two-rank-plan.prmp \
+  &#45;&#45;device CUDA0 &#45;&#45;split-mode layer \
+  &#45;&#45;moe-device-group CUDA0,CUDA1,CUDA2,CUDA3 \
+  &#45;&#45;head &#45;&#45;world 2 \
+  &#45;&#45;next RANK1_HOST:19868:20895 \
+  &#45;&#45;data-port 19867 &#45;&#45;signal-port 20894 \
+  &#45;&#45;ctx-size 8192 \
+  &#45;&#45;host 0.0.0.0 &#45;&#45;port 18727</code></pre>
+
+                <p>只有 rank 0 对外服务。请求端点为：</p>
 
                 <pre class="blog-code-block" aria-label="OpenAI 兼容请求端点"><code>http://A4000_HOST:18727/v1/chat/completions</code></pre>
 
                 <h2>7. 决定本次运行方式的关键设置</h2>
 
-                <p>启动命令明确写出了实验的执行策略，其中最重要的设置包括：</p>
+                <p>关键设置包括：</p>
 
                 <ul>
-                  <li><code>&#45;&#45;model /path/to/Hy4-preview-STQ1_0.gguf</code>：两个 rank 都加载经过校验的同一本地模型制品；</li>
-                  <li><code>&#45;&#45;load-mode mmap</code>：模型大于聚合快速内存，冷页从本地存储读取；</li>
                   <li><code>&#45;&#45;moe-provider tiered-local-cold-hot-v1</code>：热专家数据保留在 GPU，较冷的数据使用主机内存和本地 SSD；</li>
                   <li><code>&#45;&#45;moe-routing-policy local-cold-no-remote-v1</code>：每个 rank 从本地读取自己的冷权重，而不是从另一台机器获取；</li>
-                  <li><code>&#45;&#45;moe-manual-plan /path/to/hy4-two-rank-plan.prmp</code>：两个 rank 都加载同一份经过校验的层放置计划；</li>
+                  <li><code>&#45;&#45;moe-manual-plan</code>：两个 rank 都加载同一份经过校验的层放置计划；</li>
                   <li><code>&#45;&#45;split-mode layer</code>：按 plan 放置常驻 main-graph 和 shared-expert 层数据；routed hot experts 仍使用 rank 0 内部的本地专家并行；</li>
-                  <li><code>&#45;&#45;ctx-size 8192 &#45;&#45;batch-size 2 &#45;&#45;ubatch-size 1 &#45;&#45;parallel 1</code>：每次运行一个 8K 上下文请求；</li>
-                  <li><code>&#45;&#45;n-predict -1</code>：服务端不设置生成长度上限；</li>
-                  <li><code>&#45;&#45;seed 0 &#45;&#45;temp 0 &#45;&#45;top-k 1 &#45;&#45;top-p 1</code>：参考路径使用确定性解码；</li>
-                  <li><code>&#45;&#45;no-warmup</code>：跳过自动预热，在测量前显式发送一次预热请求。</li>
+                  <li><code>&#45;&#45;moe-device-group</code>：声明每个 rank 可用且有序的本地 GPU 组；</li>
+                  <li><code>&#45;&#45;ctx-size 8192</code>：使用本次实验的 8K 上下文窗口。</li>
                 </ul>
 
-                <p>实测配置还启用了请求感知调度、热专家缓存、精确预取、路由页面预取与 page cache 填充、后台 staging 和异步复制路径。整个运行过程中，两个 rank 始终使用同一套记录下来的环境变量和启动命令矩阵。</p>
-
-                <h2>8. 预热一次，再逐个测量请求</h2>
-
-                <p>两个 rank 都报告健康后，我们先向 rank 0 发送一次预热请求，再在没有其他并发请求的情况下执行一次正式请求。服务端使用 8K 上下文；除非客户端自行提供 <code>max_tokens</code>，否则允许模型自然完成生成。</p>
-
-                <p>预热后的某次参考运行测得稳态解码约为<strong>每 token 0.65 秒</strong>。这是一次实测结果，不是性能保证。提示词长度、专家路由、SSD 带宽、可用内存、缓存状态和后台负载都可能改变结果。</p>
-
-                <p>提示词缓存主要缩短首 token 出现前的等待时间，本身不会让后续 token 解码得更快。</p>
-
-                <h2>不要混用不同运行中的测量结果</h2>
-
-                <p>案例研究、Playground 回放和本文运行记录保留的是三次不同的实测。每个吞吐数字都属于特定的二进制文件、模型修订版本、提示词、缓存状态、存储、网络和测量定义，不应在不同运行之间悄然替换。</p>
-
-                <blockquote><strong>可复现的单位不是“五张 GPU 上运行 Hy4”，而是完整链路：制品、凭据、拓扑、运行时设置、启动顺序、请求和计时方法。</strong></blockquote>
-
-                <h2>这套流程证明了什么，又没有证明什么</h2>
-
-                <p>这不是一键安装器。它要求上述 x86-64 Linux 系统、NVIDIA 驱动、匹配的 CUDA 和 cuBLAS 版本、对固定模型仓库的访问权限、两台机器上足够的本地存储、可用的主机间网络，以及支持 HY4 和 STQ1_0、并配有匹配制品适配器的实验专用 PRIMA build。</p>
-
-                <p>它提供的是一条可审视的路径：让分布在两台机器上的五张异构 GPU 汇聚到一个面向客户端的 API。实验的核心思路由此变得具体：没有任何单台设备能在快速内存中容纳完整的 770B 模型，但每台设备都能向同一个协同运行时贡献模型层、显存、系统内存、存储带宽和算力。</p>
-
-                <p>要复现这次运行，双 rank 编排、环境变量、端口、与模型绑定的凭据、适配器、清单和 <code>&#45;&#45;model</code> 值，都必须与同一个支持 STQ1_0 的运行时 build 保持一致。</p>
+                <p>PRIMA 在内部管理专家缓存、预取、page cache 填充、后台 staging 和异步传输。</p>
 
                 <p>我们在 <a href="./playground" data-route-link="playground">Playground</a> 中回放实测生成过程。Playground 不连接真实设备，也不会启动实时推理；它按照一次真实离线推理运行所记录的固定输入、输出和逐 token 时间进行回放。</p>
 
