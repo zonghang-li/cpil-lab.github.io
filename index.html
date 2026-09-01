@@ -340,7 +340,7 @@ fi
 test &#45;r "$MODEL"
 test "$(stat &#45;c %s &#45;&#45; "$MODEL")" &#45;eq "$EXPECTED_BYTES"</code></pre>
 
-              <p>The single file is 229,412,839,872 bytes. Put one assumed-complete, fixed copy on fast local storage on each machine; do not hash the model file. The Hugging Face repository’s current README and auxiliary files are authoritative, while the manifest below pins the frozen artifact revision required by this preview runtime. Each wrapper opens the local file on FD 203, and <code>&#45;&#45;model</code> reads it through <code>/proc/self/fd/203</code>.</p>
+              <p>The single file is 229,412,839,872 bytes. Put one assumed-complete, fixed copy on fast local storage on each machine. Each wrapper opens the local file on FD 203, and <code>&#45;&#45;model</code> reads it through <code>/proc/self/fd/203</code>.</p>
 
               <p>The cross-LAN link carried intermediate activations and control traffic, not a continuous stream of 200GB-plus model weights.</p>
 
@@ -877,7 +877,7 @@ fi
 test &#45;r "$MODEL"
 test "$(stat &#45;c %s &#45;&#45; "$MODEL")" &#45;eq "$EXPECTED_BYTES"</code></pre>
 
-                <p>该单文件精确大小为 229,412,839,872 字节。两台机器的高速本地存储上各放置一份假定完整且固定的副本，不要对模型文件做哈希。Hugging Face 仓库当前 main 分支的 README 与附加文件为权威来源；下方 manifest 则固定本预览运行时所需的制品修订。每个 wrapper 在 FD 203 上打开本地文件，<code>&#45;&#45;model</code> 再通过 <code>/proc/self/fd/203</code> 读取。</p>
+                <p>该单文件精确大小为 229,412,839,872 字节。两台机器的高速本地存储上各放置一份假定完整且固定的副本。每个 wrapper 在 FD 203 上打开本地文件，<code>&#45;&#45;model</code> 再通过 <code>/proc/self/fd/203</code> 读取。</p>
 
                 <p>跨局域网链路传输的是中间激活和控制流量，而不是持续传输超过 200 GB 的模型权重。</p>
 
