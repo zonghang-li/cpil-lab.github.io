@@ -1353,6 +1353,22 @@ h3 {
   line-height: 1.65;
 }
 
+.blog-post__footnotes {
+  margin-top: clamp(54px, 8vh, 78px);
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.blog-post__footnotes .blog-post__footnote {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.blog-post__footnotes .blog-post__footnote + .blog-post__footnote {
+  margin-top: 8px;
+}
+
 .blog-post__footnote sup {
   margin-right: 0.45em;
   color: var(--orange);
