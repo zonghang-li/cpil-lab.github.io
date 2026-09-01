@@ -213,12 +213,10 @@
               <header class="blog-post__header">
                 <div class="blog-meta"><time datetime="2026-08-31">August 31, 2026</time></div>
                 <h1 id="hy4-runbook-title-en">Inside the PRIMA Hy4 770B Experiment: How We Ran It Across Two Machines</h1>
-                <p>Two Linux machines, five GPUs, one 229 GB GGUF, two ranks, and one OpenAI-compatible endpoint.</p>
+                <p>Two machines in different locations, across separate networks and connected wirelessly, combined 80 GB of VRAM and 64 GB of RAM to run Hy4 770B at 1 TPS.</p>
               </header>
 
               <div class="blog-post__body">
-              <blockquote><strong>A performance result is only useful when the system behind it is inspectable. This is the deployment path behind PRIMA’s two-machine Hy4 770B experiment.</strong></blockquote>
-
               <p>The <a href="./blog/hunyuan4-770b-local-devices" data-blog-post-link="hunyuan4-770b-local-devices">Hy4 770B case study</a> explains why we combined existing devices and what the experiment revealed about scalable local AI. This article focuses on the mechanics: what ran on each machine, how the model was validated and loaded across two ranks, which process started first, and how requests entered the system.</p>
 
               <p>The procedure below records the complete two-rank path used on this testbed: the per-machine artifacts, model validation, process order, network ports, runtime settings, and measurement boundary.</p>
@@ -368,12 +366,10 @@ CUDA_VISIBLE_DEVICES=0 \
               <header class="blog-post__header">
                 <div class="blog-meta"><time datetime="2026-08-31">2026 年 8 月 31 日</time></div>
                 <h1 id="hy4-runbook-title-zh">PRIMA Hy4 770B 实验全记录：我们如何用两台机器运行它</h1>
-                <p>两台 Linux 机器、五张 GPU、一份 229 GB GGUF、两个 rank，以及一个 OpenAI 兼容端点。</p>
+                <p>两台机器，异地、跨网、无线连接，总计 80 GB 显存, 64 GB RAM，把 Hy4 770B 跑到 1 TPS。</p>
               </header>
 
               <div class="blog-post__body">
-                <blockquote><strong>只有当支撑性能结果的系统可供审视时，这个结果才真正有用。本文记录了 PRIMA 双机 Hy4 770B 实验背后的部署路径。</strong></blockquote>
-
                 <p><a href="./blog/hunyuan4-770b-local-devices" data-blog-post-link="hunyuan4-770b-local-devices">Hy4 770B 案例研究</a>解释了我们为何组合已有设备，以及这次实验揭示了可扩展本地 AI 的哪些可能。本文聚焦实际运行机制：每台机器运行什么、如何在两个 rank 上校验并加载模型、哪个进程先启动，以及请求如何进入系统。</p>
 
                 <p>下面完整记录了这套测试环境的双 rank 运行路径：每台机器使用的制品、模型校验、进程顺序、网络端口、运行设置和测量边界。</p>
