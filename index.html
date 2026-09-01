@@ -713,8 +713,6 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
 
               <p>Immediately after launch, re-run <code>ss &#45;ltnp</code> and verify that the observed wildcard data, signal, echo, and HTTP listeners—including 20770/20771—are protected by the preconfigured ingress policy. Neither <code>&#45;&#45;host 127.0.0.1</code> nor the SSH loopback forwards constrain Prima’s own wildcard binds.</p>
 
-              <p>For cleanup, press Ctrl-C in Terminal C, then Terminal B, then Terminal A. If you launched wrappers under a supervisor, record their exact PIDs, executable paths, start times, and command lines first; stop only those identities and verify ports 18331, 18332, 19540–19543, 20570–20573, 20770, and 20771 are released. Never use a broad <code>pkill</code>.</p>
-
               <h2>7. The settings that shaped the run</h2>
 
               <p>The essential settings were:</p>
@@ -1249,8 +1247,6 @@ jq &#45;e '((((.choices[0].message.content // "") | length) &gt; 0) or
 jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
 
                 <p>启动后立即再次运行 <code>ss &#45;ltnp</code>，确认观察到的 wildcard data、signal、echo 与 HTTP listener（包括 20770/20771）均已被预先配置的 ingress 策略保护。<code>&#45;&#45;host 127.0.0.1</code> 与 SSH loopback forward 都不会约束 Prima 自身的 wildcard bind。</p>
-
-                <p>清理时依次在终端 C、终端 B、终端 A 按 Ctrl-C。如果使用 supervisor 后台启动，必须先记录精确 PID、可执行路径、start time 与命令行；只停止匹配的身份，并确认 18331、18332、19540–19543、20570–20573、20770 与 20771 端口均已释放。禁止使用宽泛的 <code>pkill</code>。</p>
 
                 <h2>7. 决定本次运行方式的关键设置</h2>
 
