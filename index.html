@@ -420,9 +420,9 @@ CUDA_VISIBLE_DEVICES=0 \
 
               <p>PRIMA manages expert caching, prefetching, page-cache population, background staging, and asynchronous transfers internally.</p>
 
-              <p>We replay the measured generation in the <a href="./playground" data-route-link="playground">Playground</a>. The Playground does not connect to live devices or start a live inference run; its fixed input, output, and timing come from offline measurements.</p>
+              <p>We replay the measured generation in the <a href="./playground" data-route-link="playground">Playground</a>. The Playground does not connect to live devices or start a live inference run; it replays the fixed input, output, and per-token timing captured from a real offline inference run.</p>
 
-              <p>This guidance is a functional preview. Future releases will simplify deployment and support automatic plan generation.</p>
+              <p><strong>This guidance is a functional preview. It currently supports Linux only; Macs are not yet supported. Future releases will simplify deployment, support automatic plan generation, and add support for both Mac clusters and mixed Mac–Linux clusters.</strong></p>
               </div>
             </div>
 
@@ -620,7 +620,9 @@ CUDA_VISIBLE_DEVICES=0 \
 
                 <p>要复现这次运行，双 rank 编排、环境变量、端口、与模型绑定的凭据、适配器、清单和 <code>&#45;&#45;model</code> 值，都必须与同一个支持 STQ1_0 的运行时 build 保持一致。</p>
 
-                <p>本指南仅用于功能预览。未来版本将简化部署流程，并支持自动生成 plan。</p>
+                <p>我们在 <a href="./playground" data-route-link="playground">Playground</a> 中回放实测生成过程。Playground 不连接真实设备，也不会启动实时推理；它按照一次真实离线推理运行所记录的固定输入、输出和逐 token 时间进行回放。</p>
+
+                <p><strong>本指南仅用于功能预览。目前仅适配 Linux，Mac 系列设备暂未支持。未来版本将简化部署流程、支持自动生成 plan，并支持 Mac 集群和 Mac–Linux 混合集群。</strong></p>
               </div>
             </div>
           </article>
