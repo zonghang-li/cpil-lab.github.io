@@ -1419,6 +1419,9 @@ h3 {
   background: transparent;
   color: #262524;
   font: 500 13px/1.7 "Geist Mono", monospace;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+  word-spacing: 0.16em;
   overflow-wrap: normal;
   white-space: pre;
   word-break: normal;
