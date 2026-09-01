@@ -733,13 +733,11 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
 
               <p>The common wrapper also fixes PCI-bus GPU ordering, disables CUDA graphs, enables the measured CPU–CUDA numeric-compatibility path, and sends inter-rank activations as FP32. The <code>PRIMA_MOE_*</code> variables shown in the common block explicitly enable the reproduced request planner, hot-cache policy, cold prefetch, page-cache population, background staging and promotion, and asynchronous copy synchronization. Omitting them is a different, unverified configuration.</p>
 
-              <p><strong>Reproduction status (September 1, 2026):</strong> the Hugging Face runtime archives passed their checksum and ELF dependency checks; the private-authority receipt, topology, and plan flow completed; both ranks became ready; rank 0 returned HTTP 200 from <code>/health</code>; and two fixed-sampler chat requests returned HTTP 200 while hot/cold expert misses, hits, and promotions were active. The retained 8- and 32-token responses—not the 64-token example above—reported average predicted-token latency (<code>predicted_ms / predicted_n</code>) of 1,651.99 and 1,728.70 ms/token. The cache counters and those latency values are retained observations, not results recomputed by the displayed smoke command. No W60+N60 or tail20 measurement was run, so these values cannot be compared with that acceptance gate. This establishes a functional deployment smoke test only—not output correctness, cross-run token parity, or sub-1.5-second sustained performance.</p>
-
-              <p>The <a href="./playground" data-route-link="playground">Playground</a> labels its fixed replay as <code>Hy4-preview-STQ1_0</code>. It does not connect to live devices or start inference.</p>
+              <p>We replay the measured generation in the <a href="./playground" data-route-link="playground">Playground</a>. The Playground does not connect to live devices or start a live inference run; it replays the fixed input, output, and per-token timing captured from a real offline inference run.</p>
 
               <div class="blog-post__footnotes" role="note" aria-label="Guidance notes">
                 <p class="blog-post__footnote"><sup>1</sup> This guidance is a functional preview limited to the exact x86-64, GPU/SM, Ubuntu, and CUDA ABI combinations in the compatibility matrix above. Macs are not yet supported. Future releases will simplify deployment, support automatic plan generation, and add support for both Mac clusters and mixed Mac–Linux clusters.</p>
-                <p class="blog-post__footnote"><sup>2</sup> Executable binary packages: public <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main/prima-runtime" target="_blank" rel="noreferrer">AngelSlim/Hy4-preview-GGUF/prima-runtime</a>. Model README and auxiliary files are authoritative on the repository’s current <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main" target="_blank" rel="noreferrer">Hugging Face main branch</a>.</p>
+                <p class="blog-post__footnote"><sup>2</sup> Executable binary packages: public <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main/prima-runtime" target="_blank" rel="noreferrer">AngelSlim/Hy4-preview-GGUF/prima-runtime</a>.</p>
               </div>
               </div>
             </div>
@@ -1268,13 +1266,11 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
 
                 <p>公共 wrapper 还会固定 PCI 总线 GPU 顺序、关闭 CUDA graphs、启用实测的 CPU–CUDA 数值兼容路径，并以 FP32 传输 rank 间激活。公共代码块中列出的 <code>PRIMA_MOE_*</code> 变量明确启用本次复现所用的 request planner、hot-cache policy、cold prefetch、page-cache population、后台 staging/promotion 与异步 copy synchronization；省略它们就属于未经验证的另一套配置。</p>
 
-                <p><strong>复现状态（2026 年 9 月 1 日）：</strong>Hugging Face 运行时压缩包通过 checksum 与 ELF 依赖检查；私有 authority 模式下的 receipt、topology 和 plan 流程完成；两个 rank 均进入 ready；rank 0 的 <code>/health</code> 返回 HTTP 200；两次固定 sampler 的 chat 请求也返回 HTTP 200，日志同时显示冷热专家 miss、hit 与 promotion 正常活动。保留的 8-token 与 32-token response（不是上方 64-token 示例）报告的平均 predicted-token latency（<code>predicted_ms / predicted_n</code>）分别为 1,651.99 与 1,728.70 ms/token。cache counter 与这些 latency 都是保留观察，不是展示的 smoke 命令重新计算出的结果。本次没有执行 W60+N60 或 tail20 测量，因此不能与该验收 gate 比较。这只能证明功能部署 smoke test 成功，不能证明输出正确性、跨运行 token 一致性或持续低于 1.5 秒的性能。</p>
-
-                <p><a href="./playground" data-route-link="playground">Playground</a> 将固定回放标记为 <code>Hy4-preview-STQ1_0</code>。它不会连接真实设备或启动推理。</p>
+                <p>我们会在 <a href="./playground" data-route-link="playground">Playground</a> 中回放实测生成过程。Playground 不会连接真实设备或启动实时推理；它回放的是一次真实离线推理运行中记录的固定输入、输出和逐 token 时间。</p>
 
                 <div class="blog-post__footnotes" role="note" aria-label="指南脚注">
                   <p class="blog-post__footnote"><sup>1</sup> 本指南仅用于功能预览，当前只适配上方兼容矩阵中精确列出的 x86-64、GPU/SM、Ubuntu 和 CUDA ABI 组合。Mac 系列设备暂未支持。未来版本将简化部署流程、支持自动生成 plan，并支持 Mac 集群和 Mac–Linux 混合集群。</p>
-                  <p class="blog-post__footnote"><sup>2</sup> 可执行二进制文件包：公开的 <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main/prima-runtime" target="_blank" rel="noreferrer">AngelSlim/Hy4-preview-GGUF/prima-runtime</a>。模型 README 与附加文件以仓库当前 <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main" target="_blank" rel="noreferrer">Hugging Face main 分支</a>为准。</p>
+                  <p class="blog-post__footnote"><sup>2</sup> 可执行二进制文件包：公开的 <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main/prima-runtime" target="_blank" rel="noreferrer">AngelSlim/Hy4-preview-GGUF/prima-runtime</a>。</p>
                 </div>
               </div>
             </div>
