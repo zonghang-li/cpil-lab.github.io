@@ -251,9 +251,10 @@
 
               <p>The packages contain compiled ELF executables, shared libraries, and symlinks. They do not contain model files, source code, setup scripts, the NVIDIA driver, CUDA, or cuBLAS.</p>
 
-              <pre class="blog-code-block" aria-label="Verify downloaded runtime packages"><code>sha256sum -c SHA256SUMS --ignore-missing
-tar -xzf prima-preview-&lt;rank&gt;-linux-x86_64-cuda-runtime.tar.gz
-ldd ./bin/prima-server | sed -n '/not found/p'</code></pre>
+              <pre class="blog-code-block" aria-label="Verify downloaded runtime packages"><code>sha256sum &#45;c SHA256SUMS &#45;&#45;ignore-missing
+RANK=a4000-rank0 # or 4090-rank1
+tar &#45;xzf "prima-preview-${RANK}-linux-x86_64-cuda-runtime.tar.gz"
+ldd ./bin/prima-server | sed &#45;n '/not found/p'</code></pre>
 
               <p>The last command should print nothing. Each package’s <code>bin/</code> and <code>lib/</code> directories must remain together so <code>prima-server</code> can find its packaged libraries.</p>
 
@@ -265,7 +266,7 @@ ldd ./bin/prima-server | sed -n '/not found/p'</code></pre>
 # expected:
 4d1d2259446e33e25c3e1d8bcb072f026cc69b90a361c5e5a8f6eca50d8d0036  Hy4-preview-STQ1_0.gguf</code></pre>
 
-              <p>The single file is approximately 229 GB. A complete, checksum-identical copy lived on fast local storage on both machines—we will optimize this storage requirement in later releases because each rank reads only the weights assigned to it—and each launch command pointed <code>--model</code> at that local file.</p>
+              <p>The single file is approximately 229 GB. A complete, checksum-identical copy lived on fast local storage on both machines—we will optimize this storage requirement in later releases because each rank reads only the weights assigned to it—and each launch command pointed <code>&#45;&#45;model</code> at that local file.</p>
 
               <p>The cross-LAN link carried intermediate activations and control traffic, not a continuous stream of 200GB-plus model weights.</p>
 
@@ -274,24 +275,24 @@ ldd ./bin/prima-server | sed -n '/not found/p'</code></pre>
               <p>Each machine generated its own receipt from a manifest for this exact STQ1_0 artifact. A receipt binds the repository revision, filename, byte size, SHA-256 value, and local model root to the machine running that rank.</p>
 
               <pre class="blog-code-block" aria-label="Create a rank-specific model receipt"><code>./bin/prima-moe-artifact create-v1 \
-  --adapter-id hyv4-preview-stq1-0-v1 \
-  --repository AngelSlim/Hy4-preview-GGUF \
-  --revision 7f10d3724b61b2e1d6e9207a0bd961768b7b30a1 \
-  --manifest /path/to/hy4-stq1_0-manifest.json \
-  --model-root /path/to/model-directory \
-  --output rank0-receipt.prar</code></pre>
+  &#45;&#45;adapter-id hyv4-preview-stq1-0-v1 \
+  &#45;&#45;repository AngelSlim/Hy4-preview-GGUF \
+  &#45;&#45;revision 7f10d3724b61b2e1d6e9207a0bd961768b7b30a1 \
+  &#45;&#45;manifest /path/to/hy4-stq1_0-manifest.json \
+  &#45;&#45;model-root /path/to/model-directory \
+  &#45;&#45;output rank0-receipt.prar</code></pre>
 
-              <p>The 4090 machine ran the same validation with <code>--output rank1-receipt.prar</code>. This made a copied or incomplete model file fail early instead of producing an ambiguous runtime error later.</p>
+              <p>The 4090 machine ran the same validation with <code>&#45;&#45;output rank1-receipt.prar</code>. This made a copied or incomplete model file fail early instead of producing an ambiguous runtime error later.</p>
 
               <p>The command options have the following roles:</p>
 
               <ul>
                 <li><code>create-v1</code> creates a version-1, machine-local artifact receipt;</li>
-                <li><code>--adapter-id</code> selects PRIMA’s model-specific STQ1_0 adapter;</li>
-                <li><code>--repository</code> and <code>--revision</code> pin the model’s source and immutable repository revision;</li>
-                <li><code>--manifest</code> supplies the expected filename, byte size, and SHA-256 identity;</li>
-                <li><code>--model-root</code> points to the local directory containing the GGUF;</li>
-                <li><code>--output</code> writes the receipt that this machine passes to <code>prima-server</code> at startup.</li>
+                <li><code>&#45;&#45;adapter-id</code> selects PRIMA’s model-specific STQ1_0 adapter;</li>
+                <li><code>&#45;&#45;repository</code> and <code>&#45;&#45;revision</code> pin the model’s source and immutable repository revision;</li>
+                <li><code>&#45;&#45;manifest</code> supplies the expected filename, byte size, and SHA-256 identity;</li>
+                <li><code>&#45;&#45;model-root</code> points to the local directory containing the GGUF;</li>
+                <li><code>&#45;&#45;output</code> writes the receipt that this machine passes to <code>prima-server</code> at startup.</li>
               </ul>
 
               <p>Generate the receipt once on each machine and reuse it while the model file and its local path remain unchanged. Moving, replacing, or re-downloading the model requires a new receipt.</p>
@@ -302,23 +303,23 @@ ldd ./bin/prima-server | sed -n '/not found/p'</code></pre>
 
               <pre class="blog-code-block" aria-label="Probe the GPU topology on both ranks"><code># Rank 0 · four-A4000 server
 CUDA_VISIBLE_DEVICES=0,1,2,3 \
-  ./bin/prima-server --moe-device-group CUDA0,CUDA1,CUDA2,CUDA3 \
-  --moe-topology-probe &gt; rank0-topology.bin
+  ./bin/prima-server &#45;&#45;moe-device-group CUDA0,CUDA1,CUDA2,CUDA3 \
+  &#45;&#45;moe-topology-probe &gt; rank0-topology.bin
 
 # Rank 1 · 4090 Laptop
 CUDA_VISIBLE_DEVICES=0 \
-  ./bin/prima-server --moe-device-group CUDA0 \
-  --moe-topology-probe &gt; rank1-topology.bin</code></pre>
+  ./bin/prima-server &#45;&#45;moe-device-group CUDA0 \
+  &#45;&#45;moe-topology-probe &gt; rank1-topology.bin</code></pre>
 
               <p>These probes verified local GPU visibility and captured the rank-specific topology before startup. Each machine kept its own topology artifact alongside its receipt and writable profile-cache path.</p>
 
               <h2>5. Start rank 0 and rank 1</h2>
 
-              <p>The two processes connect with a data port and a signal port on each rank. Rank 1 started first with <code>--worker-ready-listener</code>; rank 0 then started as <code>--head --world 2</code>.</p>
+              <p>The two processes connect with a data port and a signal port on each rank. Rank 1 started first with <code>&#45;&#45;worker-ready-listener</code>; rank 0 then started as <code>&#45;&#45;head &#45;&#45;world 2</code>.</p>
 
               <div class="blog-table-wrap" role="region" aria-label="HY4 two-rank network ports and startup order" tabindex="0">
                 <table class="blog-table--wide">
-                  <thead><tr><th scope="col">Order</th><th scope="col">Rank</th><th scope="col">Own Ring ports</th><th scope="col"><code>--next</code></th></tr></thead>
+                  <thead><tr><th scope="col">Order</th><th scope="col">Rank</th><th scope="col">Own Ring ports</th><th scope="col"><code>&#45;&#45;next</code></th></tr></thead>
                   <tbody>
                     <tr><th scope="row">1</th><td>Rank 1 · 4090</td><td>Data 19868 · Signal 20895</td><td><code>A4000_HOST:19867:20894</code></td></tr>
                     <tr><th scope="row">2</th><td>Rank 0 · A4000</td><td>Data 19867 · Signal 20894</td><td><code>RANK1_HOST:19868:20895</code></td></tr>
@@ -329,34 +330,34 @@ CUDA_VISIBLE_DEVICES=0 \
               <p>Start rank 1 on the 4090 Laptop:</p>
 
               <pre class="blog-code-block" aria-label="Start HY4 rank 1 on the 4090 Laptop"><code>CUDA_VISIBLE_DEVICES=0 ./bin/prima-server \
-  --model /path/to/Hy4-preview-STQ1_0.gguf \
-  --moe-provider tiered-local-cold-hot-v1 \
-  --moe-model-adapter hyv4-preview-stq1-0-v1 \
-  --moe-routing-policy local-cold-no-remote-v1 \
-  --moe-artifact-receipt rank1-receipt.prar \
-  --moe-profile-cache rank1-profile-cache.bin \
-  --device CUDA0 --split-mode layer --moe-device-group CUDA0 \
-  --next A4000_HOST:19867:20894 \
-  --data-port 19868 --signal-port 20895 \
-  --ctx-size 8192 \
-  --worker-ready-listener</code></pre>
+  &#45;&#45;model /path/to/Hy4-preview-STQ1_0.gguf \
+  &#45;&#45;moe-provider tiered-local-cold-hot-v1 \
+  &#45;&#45;moe-model-adapter hyv4-preview-stq1-0-v1 \
+  &#45;&#45;moe-routing-policy local-cold-no-remote-v1 \
+  &#45;&#45;moe-artifact-receipt rank1-receipt.prar \
+  &#45;&#45;moe-profile-cache rank1-profile-cache.bin \
+  &#45;&#45;device CUDA0 &#45;&#45;split-mode layer &#45;&#45;moe-device-group CUDA0 \
+  &#45;&#45;next A4000_HOST:19867:20894 \
+  &#45;&#45;data-port 19868 &#45;&#45;signal-port 20895 \
+  &#45;&#45;ctx-size 8192 \
+  &#45;&#45;worker-ready-listener</code></pre>
 
               <p>Then start rank 0 on the four-A4000 server:</p>
 
               <pre class="blog-code-block" aria-label="Start HY4 rank 0 on the four-A4000 server"><code>CUDA_VISIBLE_DEVICES=0,1,2,3 ./bin/prima-server \
-  --model /path/to/Hy4-preview-STQ1_0.gguf \
-  --moe-provider tiered-local-cold-hot-v1 \
-  --moe-model-adapter hyv4-preview-stq1-0-v1 \
-  --moe-routing-policy local-cold-no-remote-v1 \
-  --moe-artifact-receipt rank0-receipt.prar \
-  --moe-profile-cache rank0-profile-cache.bin \
-  --device CUDA0 --split-mode layer \
-  --moe-device-group CUDA0,CUDA1,CUDA2,CUDA3 \
-  --head --world 2 \
-  --next RANK1_HOST:19868:20895 \
-  --data-port 19867 --signal-port 20894 \
-  --ctx-size 8192 \
-  --host 0.0.0.0 --port 18727</code></pre>
+  &#45;&#45;model /path/to/Hy4-preview-STQ1_0.gguf \
+  &#45;&#45;moe-provider tiered-local-cold-hot-v1 \
+  &#45;&#45;moe-model-adapter hyv4-preview-stq1-0-v1 \
+  &#45;&#45;moe-routing-policy local-cold-no-remote-v1 \
+  &#45;&#45;moe-artifact-receipt rank0-receipt.prar \
+  &#45;&#45;moe-profile-cache rank0-profile-cache.bin \
+  &#45;&#45;device CUDA0 &#45;&#45;split-mode layer \
+  &#45;&#45;moe-device-group CUDA0,CUDA1,CUDA2,CUDA3 \
+  &#45;&#45;head &#45;&#45;world 2 \
+  &#45;&#45;next RANK1_HOST:19868:20895 \
+  &#45;&#45;data-port 19867 &#45;&#45;signal-port 20894 \
+  &#45;&#45;ctx-size 8192 \
+  &#45;&#45;host 0.0.0.0 &#45;&#45;port 18727</code></pre>
 
               <p>Only rank 0 served clients. The request endpoint was:</p>
 
@@ -367,10 +368,10 @@ CUDA_VISIBLE_DEVICES=0 \
               <p>The essential settings were:</p>
 
               <ul>
-                <li><code>--moe-provider tiered-local-cold-hot-v1</code>: keep hot expert data on GPU while using host memory and local SSD for colder data;</li>
-                <li><code>--moe-routing-policy local-cold-no-remote-v1</code>: read a rank’s cold weights locally instead of fetching them from the other machine;</li>
-                <li><code>--moe-device-group</code>: declare the ordered local GPU group available to each rank;</li>
-                <li><code>--ctx-size 8192</code>: use the experiment’s 8K context window.</li>
+                <li><code>&#45;&#45;moe-provider tiered-local-cold-hot-v1</code>: keep hot expert data on GPU while using host memory and local SSD for colder data;</li>
+                <li><code>&#45;&#45;moe-routing-policy local-cold-no-remote-v1</code>: read a rank’s cold weights locally instead of fetching them from the other machine;</li>
+                <li><code>&#45;&#45;moe-device-group</code>: declare the ordered local GPU group available to each rank;</li>
+                <li><code>&#45;&#45;ctx-size 8192</code>: use the experiment’s 8K context window.</li>
               </ul>
 
               <p>PRIMA manages expert caching, prefetching, page-cache population, background staging, and asynchronous transfers internally.</p>
@@ -423,9 +424,10 @@ CUDA_VISIBLE_DEVICES=0 \
 
                 <p>软件包包含已编译的 ELF 可执行文件、共享库和符号链接，不包含模型文件、源代码、安装脚本、NVIDIA 驱动、CUDA 或 cuBLAS。源代码归档不能替代任意一个针对特定 rank 的运行时软件包。</p>
 
-                <pre class="blog-code-block" aria-label="校验下载的运行时软件包"><code>sha256sum -c SHA256SUMS --ignore-missing
-tar -xzf prima-server-preview-&lt;rank&gt;-linux-x86_64-cuda-runtime.tar.gz
-ldd ./bin/prima-server | sed -n '/not found/p'</code></pre>
+                <pre class="blog-code-block" aria-label="校验下载的运行时软件包"><code>sha256sum &#45;c SHA256SUMS &#45;&#45;ignore-missing
+RANK=a4000-rank0 # 或 4090-rank1
+tar &#45;xzf "prima-server-preview-${RANK}-linux-x86_64-cuda-runtime.tar.gz"
+ldd ./bin/prima-server | sed &#45;n '/not found/p'</code></pre>
 
                 <p>最后一条命令不应输出任何内容。每个软件包中的 <code>bin/</code> 和 <code>lib/</code> 目录必须保持在一起，服务进程才能找到随包提供的库。</p>
 
@@ -437,7 +439,7 @@ ldd ./bin/prima-server | sed -n '/not found/p'</code></pre>
 # expected:
 4d1d2259446e33e25c3e1d8bcb072f026cc69b90a361c5e5a8f6eca50d8d0036  Hy4-preview-STQ1_0.gguf</code></pre>
 
-                <p>这个单文件包含 229,412,839,872 字节，约为 229 GB。两台机器的高速本地存储上各放置一份完整且校验和一致的副本，每条启动命令的 <code>--model</code> 都指向本机文件。</p>
+                <p>这个单文件包含 229,412,839,872 字节，约为 229 GB。两台机器的高速本地存储上各放置一份完整且校验和一致的副本，每条启动命令的 <code>&#45;&#45;model</code> 都指向本机文件。</p>
 
                 <p>两份副本是刻意保留的。每个 rank 从自己的存储中读取分配给它的权重；跨局域网链路传输的是中间激活和控制流量，而不是持续传输超过 200GB 的模型权重。</p>
 
@@ -446,14 +448,14 @@ ldd ./bin/prima-server | sed -n '/not found/p'</code></pre>
                 <p>每台机器都根据这个 STQ1_0 制品的清单生成自己的凭据。凭据会把仓库修订版本、文件名、字节大小、SHA-256 值和本地模型根目录，绑定到运行相应 rank 的机器。</p>
 
                 <pre class="blog-code-block" aria-label="创建特定 rank 的模型凭据"><code>./bin/prima-moe-artifact create-v1 \
-  --adapter-id &lt;matching-STQ1_0-adapter-id&gt; \
-  --repository AngelSlim/Hy4-preview-GGUF \
-  --revision 7f10d3724b61b2e1d6e9207a0bd961768b7b30a1 \
-  --manifest /path/to/hy4-stq1_0-manifest.json \
-  --model-root /path/to/model-directory \
-  --output rank0-receipt.prar</code></pre>
+  &#45;&#45;adapter-id hyv4-preview-stq1-0-v1 \
+  &#45;&#45;repository AngelSlim/Hy4-preview-GGUF \
+  &#45;&#45;revision 7f10d3724b61b2e1d6e9207a0bd961768b7b30a1 \
+  &#45;&#45;manifest /path/to/hy4-stq1_0-manifest.json \
+  &#45;&#45;model-root /path/to/model-directory \
+  &#45;&#45;output rank0-receipt.prar</code></pre>
 
-                <p>4090 机器使用 <code>--output rank1-receipt.prar</code> 执行相同校验。这样，模型文件复制不完整或内容错误时会尽早失败，而不会在后续产生含糊的运行时错误。</p>
+                <p>4090 机器使用 <code>&#45;&#45;output rank1-receipt.prar</code> 执行相同校验。这样，模型文件复制不完整或内容错误时会尽早失败，而不会在后续产生含糊的运行时错误。</p>
 
                 <blockquote><strong>运行时适配器和清单必须与这个 STQ1_0 制品完全匹配。不要复用为其他模型文件或量化格式准备的适配器 ID 或清单。</strong></blockquote>
 
@@ -463,23 +465,23 @@ ldd ./bin/prima-server | sed -n '/not found/p'</code></pre>
 
                 <pre class="blog-code-block" aria-label="探测两个 rank 的 GPU 拓扑"><code># Rank 0 · four-A4000 server
 CUDA_VISIBLE_DEVICES=0,1,2,3 \
-  ./bin/prima-server --moe-device-group CUDA0,CUDA1,CUDA2,CUDA3 \
-  --moe-topology-probe &gt; rank0-topology.bin
+  ./bin/prima-server &#45;&#45;moe-device-group CUDA0,CUDA1,CUDA2,CUDA3 \
+  &#45;&#45;moe-topology-probe &gt; rank0-topology.bin
 
 # Rank 1 · 4090 Laptop
 CUDA_VISIBLE_DEVICES=0 \
-  ./bin/prima-server --moe-device-group CUDA0 \
-  --moe-topology-probe &gt; rank1-topology.bin</code></pre>
+  ./bin/prima-server &#45;&#45;moe-device-group CUDA0 \
+  &#45;&#45;moe-topology-probe &gt; rank1-topology.bin</code></pre>
 
                 <p>这些探测会确认本地 GPU 可见性，并在启动前记录特定 rank 的拓扑。每台机器都保留自己的拓扑文件、凭据和可写的 profile cache 路径。</p>
 
                 <h2>5. 先启动 rank 1，再启动 rank 0</h2>
 
-                <p>两个进程组成一个环，每个 rank 各有一个数据端口和一个信号端口。Rank 1 先使用 <code>--worker-ready-listener</code> 启动；随后 rank 0 以 <code>--head --world 2</code> 启动。</p>
+                <p>两个进程组成一个环，每个 rank 各有一个数据端口和一个信号端口。Rank 1 先使用 <code>&#45;&#45;worker-ready-listener</code> 启动；随后 rank 0 以 <code>&#45;&#45;head &#45;&#45;world 2</code> 启动。</p>
 
                 <div class="blog-table-wrap" role="region" aria-label="HY4 双 rank 网络端口与启动顺序" tabindex="0">
                   <table class="blog-table--wide">
-                    <thead><tr><th scope="col">顺序</th><th scope="col">Rank</th><th scope="col">本机 Ring 端口</th><th scope="col"><code>--next</code></th><th scope="col">HTTP API</th></tr></thead>
+                    <thead><tr><th scope="col">顺序</th><th scope="col">Rank</th><th scope="col">本机 Ring 端口</th><th scope="col"><code>&#45;&#45;next</code></th><th scope="col">HTTP API</th></tr></thead>
                     <tbody>
                       <tr><th scope="row">1</th><td>Rank 1 · 4090</td><td>数据 19868 · 信号 20895</td><td><code>A4000_HOST:19867:20894</code></td><td><code>127.0.0.1:18728</code></td></tr>
                       <tr><th scope="row">2</th><td>Rank 0 · A4000</td><td>数据 19867 · 信号 20894</td><td><code>RANK1_HOST:19868:20895</code></td><td><code>0.0.0.0:18727</code></td></tr>
@@ -496,14 +498,14 @@ CUDA_VISIBLE_DEVICES=0 \
                 <p>启动命令明确写出了实验的执行策略，其中最重要的设置包括：</p>
 
                 <ul>
-                  <li><code>--model /path/to/Hy4-preview-STQ1_0.gguf</code>：两个 rank 都加载经过校验的同一本地模型制品；</li>
-                  <li><code>--load-mode mmap</code>：模型大于聚合快速内存，冷页从本地存储读取；</li>
-                  <li><code>--moe-provider tiered-local-cold-hot-v1</code>：热专家数据保留在 GPU，较冷的数据使用主机内存和本地 SSD；</li>
-                  <li><code>--moe-routing-policy local-cold-no-remote-v1</code>：每个 rank 从本地读取自己的冷权重，而不是从另一台机器获取；</li>
-                  <li><code>--ctx-size 8192 --batch-size 2 --ubatch-size 1 --parallel 1</code>：每次运行一个 8K 上下文请求；</li>
-                  <li><code>--n-predict -1</code>：服务端不设置生成长度上限；</li>
-                  <li><code>--seed 0 --temp 0 --top-k 1 --top-p 1</code>：参考路径使用确定性解码；</li>
-                  <li><code>--no-warmup</code>：跳过自动预热，在测量前显式发送一次预热请求。</li>
+                  <li><code>&#45;&#45;model /path/to/Hy4-preview-STQ1_0.gguf</code>：两个 rank 都加载经过校验的同一本地模型制品；</li>
+                  <li><code>&#45;&#45;load-mode mmap</code>：模型大于聚合快速内存，冷页从本地存储读取；</li>
+                  <li><code>&#45;&#45;moe-provider tiered-local-cold-hot-v1</code>：热专家数据保留在 GPU，较冷的数据使用主机内存和本地 SSD；</li>
+                  <li><code>&#45;&#45;moe-routing-policy local-cold-no-remote-v1</code>：每个 rank 从本地读取自己的冷权重，而不是从另一台机器获取；</li>
+                  <li><code>&#45;&#45;ctx-size 8192 &#45;&#45;batch-size 2 &#45;&#45;ubatch-size 1 &#45;&#45;parallel 1</code>：每次运行一个 8K 上下文请求；</li>
+                  <li><code>&#45;&#45;n-predict -1</code>：服务端不设置生成长度上限；</li>
+                  <li><code>&#45;&#45;seed 0 &#45;&#45;temp 0 &#45;&#45;top-k 1 &#45;&#45;top-p 1</code>：参考路径使用确定性解码；</li>
+                  <li><code>&#45;&#45;no-warmup</code>：跳过自动预热，在测量前显式发送一次预热请求。</li>
                 </ul>
 
                 <p>实测配置还启用了请求感知调度、热专家缓存、精确预取、路由页面预取与 page cache 填充、后台 staging 和异步复制路径。整个运行过程中，两个 rank 始终使用同一套记录下来的环境变量和启动命令矩阵。</p>
@@ -528,7 +530,7 @@ CUDA_VISIBLE_DEVICES=0 \
 
                 <p>它提供的是一条可审视的路径：让分布在两台机器上的五张异构 GPU 汇聚到一个面向客户端的 API。实验的核心思路由此变得具体：没有任何单台设备能在快速内存中容纳完整的 770B 模型，但每台设备都能向同一个协同运行时贡献模型层、显存、系统内存、存储带宽和算力。</p>
 
-                <p>要复现这次运行，双 rank 编排、环境变量、端口、与模型绑定的凭据、适配器、清单和 <code>--model</code> 值，都必须与同一个支持 STQ1_0 的运行时 build 保持一致。</p>
+                <p>要复现这次运行，双 rank 编排、环境变量、端口、与模型绑定的凭据、适配器、清单和 <code>&#45;&#45;model</code> 值，都必须与同一个支持 STQ1_0 的运行时 build 保持一致。</p>
               </div>
             </div>
           </article>
