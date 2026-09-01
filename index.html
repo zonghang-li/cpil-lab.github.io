@@ -261,7 +261,7 @@
                 </table>
               </div>
 
-              <p>The packages contain compiled ELF executables, shared libraries, and symlinks. They do not contain model files, source code, setup scripts, the NVIDIA driver, CUDA, or cuBLAS. The GitHub repository was observed private on September 1, 2026: collaborators must authenticate with an account that can read it. The public Hugging Face <code>prima-runtime</code> directory is the fallback mirror.</p>
+              <p>The packages contain compiled ELF executables, shared libraries, and symlinks. They do not contain model files, source code, setup scripts, the NVIDIA driver, CUDA, or cuBLAS. The public Hugging Face <code>prima-runtime</code> directory provides the runtime packages and their matching <code>SHA256SUMS</code>.</p>
 
               <pre class="blog-code-block" aria-label="Download one Hy4 preview runtime package"><code>set &#45;euo pipefail
 mkdir &#45;p hy4-runtime
@@ -271,36 +271,20 @@ for tool in bash tar file ldd sha256sum curl realpath stat install sed ssh jq nv
 done
 
 ROLE=a4000-rank0   # use 4090-rank1 on the Laptop
-SOURCE=huggingface # use github only with collaborator access
-RELEASE_ARCHIVE="prima-preview-${ROLE}-linux-x86_64-cuda-runtime.tar.gz"
-HF_ARCHIVE="prima-server-preview-${ROLE}-linux-x86_64-cuda-runtime.tar.gz"
+HF_BASE=https://huggingface.co/AngelSlim/Hy4-preview-GGUF/resolve/main/prima-runtime
+ARCHIVE="prima-preview-${ROLE}-linux-x86_64-cuda-runtime.tar.gz"
 
-case "$SOURCE" in
-  github)
-    command &#45;v gh &gt;/dev/null
-    gh auth status
-    gh release download hy4-moe-preview-binaries \
-      &#45;&#45;repo zonghang-li/prima.cpp \
-      &#45;p SHA256SUMS &#45;p "$RELEASE_ARCHIVE"
-    ARCHIVE="$RELEASE_ARCHIVE"
-    ;;
-  huggingface)
-    HF_BASE=https://huggingface.co/AngelSlim/Hy4-preview-GGUF/resolve/main/prima-runtime
-    curl &#45;fL &#45;&#45;retry 20 &#45;o SHA256SUMS "$HF_BASE/SHA256SUMS?download=true"
-    curl &#45;fL &#45;C &#45; &#45;&#45;retry 20 &#45;o "$HF_ARCHIVE" \
-      "$HF_BASE/$HF_ARCHIVE?download=true"
-    ARCHIVE="$HF_ARCHIVE"
-    ;;
-  *) echo "SOURCE must be github or huggingface" &gt;&amp;2; exit 2 ;;
-esac</code></pre>
+curl &#45;fL &#45;&#45;retry 20 &#45;o SHA256SUMS "$HF_BASE/SHA256SUMS?download=true"
+curl &#45;fL &#45;C &#45; &#45;&#45;retry 20 &#45;o "$ARCHIVE" \
+  "$HF_BASE/$ARCHIVE?download=true"</code></pre>
 
-              <p>The public mirror currently prefixes these archive filenames with <code>prima-server-</code>, while the authenticated Release uses the shorter names in the package table. The source-specific variables above handle that difference and each path downloads its own <code>SHA256SUMS</code>; do not rename an archive or mix checksum manifests between sources.</p>
+              <p>Download the archive and <code>SHA256SUMS</code> from that same public directory. Keep the exact archive filename shown above; do not rename it or substitute a checksum manifest from another source.</p>
 
               <pre class="blog-code-block" aria-label="Verify downloaded runtime packages"><code>set &#45;euo pipefail
 DOWNLOAD_DIR=/absolute/path/to/hy4-runtime
-# Match the exact archive and SHA256SUMS downloaded from one source above.
-ARCHIVE=prima&#45;server&#45;preview&#45;a4000&#45;rank0&#45;linux&#45;x86_64&#45;cuda&#45;runtime.tar.gz
-# On the Laptop use the 4090-rank1 name; for GitHub use the shorter prima-preview-* name.
+# Match the exact archive and SHA256SUMS downloaded from Hugging Face above.
+ARCHIVE=prima&#45;preview&#45;a4000&#45;rank0&#45;linux&#45;x86_64&#45;cuda&#45;runtime.tar.gz
+# On the Laptop use the 4090-rank1 archive name.
 cd "$DOWNLOAD_DIR"
 
 sha256sum &#45;c SHA256SUMS &#45;&#45;ignore-missing
@@ -326,7 +310,7 @@ while IFS= read &#45;r &#45;d '' artifact; do
 done &lt; &lt;(find . &#45;type f &#45;print0)
 (( elf_count > 0 ))</code></pre>
 
-              <p>Run the blocks in Bash. Anonymous requests to the private GitHub Release return 404; that is an access result, not evidence that the asset is absent. <code>SHA256SUMS</code> verifies the small runtime archives only—this procedure deliberately does not hash the model payload. The second block enters the extracted top-level directory, runs <code>ldd</code> on every ELF artifact, and fails on a missing dependency or an archive with no ELF files. Keep each package’s <code>bin/</code> and <code>lib/</code> directories together.</p>
+              <p>Run the blocks in Bash. <code>SHA256SUMS</code> verifies the small runtime archives only—this procedure deliberately does not hash the model payload. The second block enters the extracted top-level directory, runs <code>ldd</code> on every ELF artifact, and fails on a missing dependency or an archive with no ELF files. Keep each package’s <code>bin/</code> and <code>lib/</code> directories together.</p>
 
               <h2>2. Put the same model file on both machines</h2>
 
@@ -751,13 +735,13 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
 
               <p>The common wrapper also fixes PCI-bus GPU ordering, disables CUDA graphs, enables the measured CPU–CUDA numeric-compatibility path, and sends inter-rank activations as FP32. The <code>PRIMA_MOE_*</code> variables shown in the common block explicitly enable the reproduced request planner, hot-cache policy, cold prefetch, page-cache population, background staging and promotion, and asynchronous copy synchronization. Omitting them is a different, unverified configuration.</p>
 
-              <p><strong>Reproduction status (September 1, 2026):</strong> the Release archives passed their checksum and ELF dependency checks; the private-authority receipt, topology, and plan flow completed; both ranks became ready; rank 0 returned HTTP 200 from <code>/health</code>; and two fixed-sampler chat requests returned HTTP 200 while hot/cold expert misses, hits, and promotions were active. The retained 8- and 32-token responses—not the 64-token example above—reported average predicted-token latency (<code>predicted_ms / predicted_n</code>) of 1,651.99 and 1,728.70 ms/token. The cache counters and those latency values are retained observations, not results recomputed by the displayed smoke command. No W60+N60 or tail20 measurement was run, so these values cannot be compared with that acceptance gate. This establishes a functional deployment smoke test only—not output correctness, cross-run token parity, or sub-1.5-second sustained performance.</p>
+              <p><strong>Reproduction status (September 1, 2026):</strong> the Hugging Face runtime archives passed their checksum and ELF dependency checks; the private-authority receipt, topology, and plan flow completed; both ranks became ready; rank 0 returned HTTP 200 from <code>/health</code>; and two fixed-sampler chat requests returned HTTP 200 while hot/cold expert misses, hits, and promotions were active. The retained 8- and 32-token responses—not the 64-token example above—reported average predicted-token latency (<code>predicted_ms / predicted_n</code>) of 1,651.99 and 1,728.70 ms/token. The cache counters and those latency values are retained observations, not results recomputed by the displayed smoke command. No W60+N60 or tail20 measurement was run, so these values cannot be compared with that acceptance gate. This establishes a functional deployment smoke test only—not output correctness, cross-run token parity, or sub-1.5-second sustained performance.</p>
 
               <p>The <a href="./playground" data-route-link="playground">Playground</a> labels its fixed replay as <code>Hy4-preview-STQ1_0</code>. It does not connect to live devices or start inference.</p>
 
               <div class="blog-post__footnotes" role="note" aria-label="Guidance notes">
                 <p class="blog-post__footnote"><sup>1</sup> This guidance is a functional preview limited to the exact x86-64, GPU/SM, Ubuntu, and CUDA ABI combinations in the compatibility matrix above. Macs are not yet supported. Future releases will simplify deployment, support automatic plan generation, and add support for both Mac clusters and mixed Mac–Linux clusters.</p>
-                <p class="blog-post__footnote"><sup>2</sup> Executable binary packages: authenticated <a href="https://github.com/zonghang-li/prima.cpp/releases/tag/hy4-moe-preview-binaries" target="_blank" rel="noreferrer">GitHub Release</a>; public mirror: <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main/prima-runtime" target="_blank" rel="noreferrer">AngelSlim/Hy4-preview-GGUF/prima-runtime</a>. Model README and auxiliary files are authoritative on the repository’s current <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main" target="_blank" rel="noreferrer">Hugging Face main branch</a>.</p>
+                <p class="blog-post__footnote"><sup>2</sup> Executable binary packages: public <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main/prima-runtime" target="_blank" rel="noreferrer">AngelSlim/Hy4-preview-GGUF/prima-runtime</a>. Model README and auxiliary files are authoritative on the repository’s current <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main" target="_blank" rel="noreferrer">Hugging Face main branch</a>.</p>
               </div>
               </div>
             </div>
@@ -814,7 +798,7 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
                   </table>
                 </div>
 
-                <p>软件包包含已编译的 ELF 可执行文件、共享库和符号链接，不包含模型文件、源代码、安装脚本、NVIDIA 驱动、CUDA 或 cuBLAS。截至 2026 年 9 月 1 日，GitHub 仓库被观测为私有仓库；协作者必须先使用有读取权限的账号认证。公开的 Hugging Face <code>prima-runtime</code> 目录是备用镜像。</p>
+                <p>软件包包含已编译的 ELF 可执行文件、共享库和符号链接，不包含模型文件、源代码、安装脚本、NVIDIA 驱动、CUDA 或 cuBLAS。公开的 Hugging Face <code>prima-runtime</code> 目录提供运行时软件包及其对应的 <code>SHA256SUMS</code>。</p>
 
                 <pre class="blog-code-block" aria-label="下载一个 Hy4 preview 运行时软件包"><code>set &#45;euo pipefail
 mkdir &#45;p hy4-runtime
@@ -824,36 +808,20 @@ for tool in bash tar file ldd sha256sum curl realpath stat install sed ssh jq nv
 done
 
 ROLE=a4000-rank0   # 在 Laptop 上使用 4090-rank1
-SOURCE=huggingface # 仅在有协作者权限时使用 github
-RELEASE_ARCHIVE="prima-preview-${ROLE}-linux-x86_64-cuda-runtime.tar.gz"
-HF_ARCHIVE="prima-server-preview-${ROLE}-linux-x86_64-cuda-runtime.tar.gz"
+HF_BASE=https://huggingface.co/AngelSlim/Hy4-preview-GGUF/resolve/main/prima-runtime
+ARCHIVE="prima-preview-${ROLE}-linux-x86_64-cuda-runtime.tar.gz"
 
-case "$SOURCE" in
-  github)
-    command &#45;v gh &gt;/dev/null
-    gh auth status
-    gh release download hy4-moe-preview-binaries \
-      &#45;&#45;repo zonghang-li/prima.cpp \
-      &#45;p SHA256SUMS &#45;p "$RELEASE_ARCHIVE"
-    ARCHIVE="$RELEASE_ARCHIVE"
-    ;;
-  huggingface)
-    HF_BASE=https://huggingface.co/AngelSlim/Hy4-preview-GGUF/resolve/main/prima-runtime
-    curl &#45;fL &#45;&#45;retry 20 &#45;o SHA256SUMS "$HF_BASE/SHA256SUMS?download=true"
-    curl &#45;fL &#45;C &#45; &#45;&#45;retry 20 &#45;o "$HF_ARCHIVE" \
-      "$HF_BASE/$HF_ARCHIVE?download=true"
-    ARCHIVE="$HF_ARCHIVE"
-    ;;
-  *) echo "SOURCE must be github or huggingface" &gt;&amp;2; exit 2 ;;
-esac</code></pre>
+curl &#45;fL &#45;&#45;retry 20 &#45;o SHA256SUMS "$HF_BASE/SHA256SUMS?download=true"
+curl &#45;fL &#45;C &#45; &#45;&#45;retry 20 &#45;o "$ARCHIVE" \
+  "$HF_BASE/$ARCHIVE?download=true"</code></pre>
 
-                <p>公开镜像当前会在这些压缩包文件名前加 <code>prima-server-</code>，已认证 Release 则使用软件包表格中的较短名称。上方变量会按来源处理命名差异，并分别下载该来源自己的 <code>SHA256SUMS</code>；不要重命名压缩包，也不要混用两个来源的 checksum manifest。</p>
+                <p>压缩包与 <code>SHA256SUMS</code> 必须从同一个公开目录下载。保留上方显示的精确压缩包文件名；不要重命名，也不要替换为其他来源的 checksum manifest。</p>
 
                 <pre class="blog-code-block" aria-label="校验下载的运行时软件包"><code>set &#45;euo pipefail
 DOWNLOAD_DIR=/absolute/path/to/hy4-runtime
-# 与上一个代码块从同一来源下载的精确文件名和 SHA256SUMS 保持一致。
-ARCHIVE=prima&#45;server&#45;preview&#45;a4000&#45;rank0&#45;linux&#45;x86_64&#45;cuda&#45;runtime.tar.gz
-# Laptop 使用 4090-rank1 文件名；GitHub 使用较短的 prima-preview-* 文件名。
+# 与上一个代码块从 Hugging Face 下载的精确文件名和 SHA256SUMS 保持一致。
+ARCHIVE=prima&#45;preview&#45;a4000&#45;rank0&#45;linux&#45;x86_64&#45;cuda&#45;runtime.tar.gz
+# Laptop 使用 4090-rank1 压缩包文件名。
 cd "$DOWNLOAD_DIR"
 
 sha256sum &#45;c SHA256SUMS &#45;&#45;ignore-missing
@@ -879,7 +847,7 @@ while IFS= read &#45;r &#45;d '' artifact; do
 done &lt; &lt;(find . &#45;type f &#45;print0)
 (( elf_count > 0 ))</code></pre>
 
-                <p>请在 Bash 中运行这些命令。匿名访问私有 GitHub Release 会返回 404；这说明没有访问权限，不代表制品不存在。<code>SHA256SUMS</code> 只校验较小的运行时压缩包；本流程明确不对模型 payload 做哈希。第二段命令进入解压目录，对每个 ELF 制品执行 <code>ldd</code>，遇到依赖缺失或包内没有 ELF 文件就失败。软件包中的 <code>bin/</code> 和 <code>lib/</code> 必须保持在一起。</p>
+                <p>请在 Bash 中运行这些命令。<code>SHA256SUMS</code> 只校验较小的运行时压缩包；本流程明确不对模型 payload 做哈希。第二段命令进入解压目录，对每个 ELF 制品执行 <code>ldd</code>，遇到依赖缺失或包内没有 ELF 文件就失败。软件包中的 <code>bin/</code> 和 <code>lib/</code> 必须保持在一起。</p>
 
                 <h2>2. 在两台机器上放置同一模型文件</h2>
 
@@ -1304,13 +1272,13 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
 
                 <p>公共 wrapper 还会固定 PCI 总线 GPU 顺序、关闭 CUDA graphs、启用实测的 CPU–CUDA 数值兼容路径，并以 FP32 传输 rank 间激活。公共代码块中列出的 <code>PRIMA_MOE_*</code> 变量明确启用本次复现所用的 request planner、hot-cache policy、cold prefetch、page-cache population、后台 staging/promotion 与异步 copy synchronization；省略它们就属于未经验证的另一套配置。</p>
 
-                <p><strong>复现状态（2026 年 9 月 1 日）：</strong>Release 压缩包通过 checksum 与 ELF 依赖检查；私有 authority 模式下的 receipt、topology 和 plan 流程完成；两个 rank 均进入 ready；rank 0 的 <code>/health</code> 返回 HTTP 200；两次固定 sampler 的 chat 请求也返回 HTTP 200，日志同时显示冷热专家 miss、hit 与 promotion 正常活动。保留的 8-token 与 32-token response（不是上方 64-token 示例）报告的平均 predicted-token latency（<code>predicted_ms / predicted_n</code>）分别为 1,651.99 与 1,728.70 ms/token。cache counter 与这些 latency 都是保留观察，不是展示的 smoke 命令重新计算出的结果。本次没有执行 W60+N60 或 tail20 测量，因此不能与该验收 gate 比较。这只能证明功能部署 smoke test 成功，不能证明输出正确性、跨运行 token 一致性或持续低于 1.5 秒的性能。</p>
+                <p><strong>复现状态（2026 年 9 月 1 日）：</strong>Hugging Face 运行时压缩包通过 checksum 与 ELF 依赖检查；私有 authority 模式下的 receipt、topology 和 plan 流程完成；两个 rank 均进入 ready；rank 0 的 <code>/health</code> 返回 HTTP 200；两次固定 sampler 的 chat 请求也返回 HTTP 200，日志同时显示冷热专家 miss、hit 与 promotion 正常活动。保留的 8-token 与 32-token response（不是上方 64-token 示例）报告的平均 predicted-token latency（<code>predicted_ms / predicted_n</code>）分别为 1,651.99 与 1,728.70 ms/token。cache counter 与这些 latency 都是保留观察，不是展示的 smoke 命令重新计算出的结果。本次没有执行 W60+N60 或 tail20 测量，因此不能与该验收 gate 比较。这只能证明功能部署 smoke test 成功，不能证明输出正确性、跨运行 token 一致性或持续低于 1.5 秒的性能。</p>
 
                 <p><a href="./playground" data-route-link="playground">Playground</a> 将固定回放标记为 <code>Hy4-preview-STQ1_0</code>。它不会连接真实设备或启动推理。</p>
 
                 <div class="blog-post__footnotes" role="note" aria-label="指南脚注">
                   <p class="blog-post__footnote"><sup>1</sup> 本指南仅用于功能预览，当前只适配上方兼容矩阵中精确列出的 x86-64、GPU/SM、Ubuntu 和 CUDA ABI 组合。Mac 系列设备暂未支持。未来版本将简化部署流程、支持自动生成 plan，并支持 Mac 集群和 Mac–Linux 混合集群。</p>
-                  <p class="blog-post__footnote"><sup>2</sup> 可执行二进制文件包：需认证的 <a href="https://github.com/zonghang-li/prima.cpp/releases/tag/hy4-moe-preview-binaries" target="_blank" rel="noreferrer">GitHub Release</a>；公开镜像：<a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main/prima-runtime" target="_blank" rel="noreferrer">AngelSlim/Hy4-preview-GGUF/prima-runtime</a>。模型 README 与附加文件以仓库当前 <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main" target="_blank" rel="noreferrer">Hugging Face main 分支</a>为准。</p>
+                  <p class="blog-post__footnote"><sup>2</sup> 可执行二进制文件包：公开的 <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main/prima-runtime" target="_blank" rel="noreferrer">AngelSlim/Hy4-preview-GGUF/prima-runtime</a>。模型 README 与附加文件以仓库当前 <a href="https://huggingface.co/AngelSlim/Hy4-preview-GGUF/tree/main" target="_blank" rel="noreferrer">Hugging Face main 分支</a>为准。</p>
                 </div>
               </div>
             </div>
