@@ -313,7 +313,26 @@ CUDA_VISIBLE_DEVICES=0 \
 
               <p>These probes verified local GPU visibility and captured the rank-specific topology before startup. Each machine kept its own topology artifact alongside its receipt and writable profile-cache path.</p>
 
-              <h2>5. Start rank 0 and rank 1</h2>
+              <h2>5. Generate the two-rank placement plan</h2>
+
+              <p>For this preview, the placement was selected explicitly and then validated and materialized with <code>prima-moe-plan</code>. Copy rank 1’s receipt and topology file to rank 0, then run the following command on rank 0:</p>
+
+              <pre class="blog-code-block" aria-label="Generate the HY4 two-rank manual placement plan"><code>./bin/prima-moe-plan create-v1 \
+  &#45;&#45;adapter hyv4-preview-stq1-0-v1 \
+  &#45;&#45;rank0-receipt /path/to/rank0-receipt.prar \
+  &#45;&#45;rank1-receipt /path/to/rank1-receipt.prar \
+  &#45;&#45;rank0-topology /path/to/rank0-topology.bin \
+  &#45;&#45;rank1-topology /path/to/rank1-topology.bin \
+  &#45;&#45;cut 61 \
+  &#45;&#45;rank0-device-layers 15,15,15,16 \
+  &#45;&#45;rank1-device-layers 17 \
+  &#45;&#45;output /path/to/hy4-two-rank-plan.prmp</code></pre>
+
+              <p><code>&#45;&#45;cut 61</code> assigns model layers 0–60 to rank 0 and layers 61–77 to rank 1. <code>&#45;&#45;rank0-device-layers 15,15,15,16</code> distributes rank 0’s 61 layers across its four A4000 GPUs; <code>&#45;&#45;rank1-device-layers 17</code> assigns the remaining 17 layers to the laptop GPU.</p>
+
+              <p>The tool does not search for the fastest placement. It verifies that the two receipts refer to the same model artifact and adapter, checks both captured GPU topologies, validates the selected cut and layer counts, and writes a binary plan. These values describe this testbed and should not be copied to different hardware without a new placement decision. Copy the generated plan to rank 1 without modifying it; both ranks then pass their local copy through <code>&#45;&#45;moe-manual-plan</code>.</p>
+
+              <h2>6. Start rank 0 and rank 1</h2>
 
               <p>The two processes connect with a data port and a signal port on each rank. Rank 1 started first with <code>&#45;&#45;worker-ready-listener</code>; rank 0 then started as <code>&#45;&#45;head &#45;&#45;world 2</code>.</p>
 
@@ -336,6 +355,7 @@ CUDA_VISIBLE_DEVICES=0 \
   &#45;&#45;moe-routing-policy local-cold-no-remote-v1 \
   &#45;&#45;moe-artifact-receipt rank1-receipt.prar \
   &#45;&#45;moe-profile-cache rank1-profile-cache.bin \
+  &#45;&#45;moe-manual-plan /path/to/hy4-two-rank-plan.prmp \
   &#45;&#45;device CUDA0 &#45;&#45;split-mode layer &#45;&#45;moe-device-group CUDA0 \
   &#45;&#45;next A4000_HOST:19867:20894 \
   &#45;&#45;data-port 19868 &#45;&#45;signal-port 20895 \
@@ -351,6 +371,7 @@ CUDA_VISIBLE_DEVICES=0 \
   &#45;&#45;moe-routing-policy local-cold-no-remote-v1 \
   &#45;&#45;moe-artifact-receipt rank0-receipt.prar \
   &#45;&#45;moe-profile-cache rank0-profile-cache.bin \
+  &#45;&#45;moe-manual-plan /path/to/hy4-two-rank-plan.prmp \
   &#45;&#45;device CUDA0 &#45;&#45;split-mode layer \
   &#45;&#45;moe-device-group CUDA0,CUDA1,CUDA2,CUDA3 \
   &#45;&#45;head &#45;&#45;world 2 \
@@ -363,13 +384,14 @@ CUDA_VISIBLE_DEVICES=0 \
 
               <pre class="blog-code-block" aria-label="OpenAI-compatible request endpoint"><code>http://A4000_HOST:18727/v1/chat/completions</code></pre>
 
-              <h2>6. The settings that shaped the run</h2>
+              <h2>7. The settings that shaped the run</h2>
 
               <p>The essential settings were:</p>
 
               <ul>
                 <li><code>&#45;&#45;moe-provider tiered-local-cold-hot-v1</code>: keep hot expert data on GPU while using host memory and local SSD for colder data;</li>
                 <li><code>&#45;&#45;moe-routing-policy local-cold-no-remote-v1</code>: read a rank’s cold weights locally instead of fetching them from the other machine;</li>
+                <li><code>&#45;&#45;moe-manual-plan</code>: load the same validated layer-placement plan on both ranks;</li>
                 <li><code>&#45;&#45;moe-device-group</code>: declare the ordered local GPU group available to each rank;</li>
                 <li><code>&#45;&#45;ctx-size 8192</code>: use the experiment’s 8K context window.</li>
               </ul>
@@ -377,6 +399,8 @@ CUDA_VISIBLE_DEVICES=0 \
               <p>PRIMA manages expert caching, prefetching, page-cache population, background staging, and asynchronous transfers internally.</p>
 
               <p>We replay the measured generation in the <a href="./playground" data-route-link="playground">Playground</a>. The Playground does not connect to live devices or start a live inference run; its fixed input, output, and timing come from offline measurements.</p>
+
+              <p>This guidance is a functional preview. Future releases will simplify deployment and support automatic plan generation.</p>
               </div>
             </div>
 
@@ -475,7 +499,26 @@ CUDA_VISIBLE_DEVICES=0 \
 
                 <p>这些探测会确认本地 GPU 可见性，并在启动前记录特定 rank 的拓扑。每台机器都保留自己的拓扑文件、凭据和可写的 profile cache 路径。</p>
 
-                <h2>5. 先启动 rank 1，再启动 rank 0</h2>
+                <h2>5. 生成双 rank 放置计划</h2>
+
+                <p>在这个预览版本中，层放置由人工明确选择，再由 <code>prima-moe-plan</code> 校验并生成二进制计划。先把 rank 1 的凭据和拓扑文件复制到 rank 0，然后在 rank 0 上运行：</p>
+
+                <pre class="blog-code-block" aria-label="生成 HY4 双 rank 人工放置计划"><code>./bin/prima-moe-plan create-v1 \
+  &#45;&#45;adapter hyv4-preview-stq1-0-v1 \
+  &#45;&#45;rank0-receipt /path/to/rank0-receipt.prar \
+  &#45;&#45;rank1-receipt /path/to/rank1-receipt.prar \
+  &#45;&#45;rank0-topology /path/to/rank0-topology.bin \
+  &#45;&#45;rank1-topology /path/to/rank1-topology.bin \
+  &#45;&#45;cut 61 \
+  &#45;&#45;rank0-device-layers 15,15,15,16 \
+  &#45;&#45;rank1-device-layers 17 \
+  &#45;&#45;output /path/to/hy4-two-rank-plan.prmp</code></pre>
+
+                <p><code>&#45;&#45;cut 61</code> 把模型的第 0–60 层分给 rank 0，把第 61–77 层分给 rank 1。<code>&#45;&#45;rank0-device-layers 15,15,15,16</code> 把 rank 0 的 61 层分配到四张 A4000；<code>&#45;&#45;rank1-device-layers 17</code> 则把余下 17 层分给 Laptop GPU。</p>
+
+                <p>这个工具不会自动搜索最快的放置方案。它会确认两个凭据指向同一模型制品和适配器，检查两端记录的 GPU 拓扑，验证人工选择的切分点与各 GPU 层数，并写出二进制 plan。这些参数只对应本测试环境，硬件变化后需要重新决定放置方式。把生成的同一份 plan 原样复制到 rank 1；两个 rank 启动时都通过 <code>&#45;&#45;moe-manual-plan</code> 指向各自的本地副本。</p>
+
+                <h2>6. 先启动 rank 1，再启动 rank 0</h2>
 
                 <p>两个进程组成一个环，每个 rank 各有一个数据端口和一个信号端口。Rank 1 先使用 <code>&#45;&#45;worker-ready-listener</code> 启动；随后 rank 0 以 <code>&#45;&#45;head &#45;&#45;world 2</code> 启动。</p>
 
@@ -493,7 +536,7 @@ CUDA_VISIBLE_DEVICES=0 \
 
                 <pre class="blog-code-block" aria-label="OpenAI 兼容请求端点"><code>http://A4000_HOST:18727/v1/chat/completions</code></pre>
 
-                <h2>6. 决定本次运行方式的关键设置</h2>
+                <h2>7. 决定本次运行方式的关键设置</h2>
 
                 <p>启动命令明确写出了实验的执行策略，其中最重要的设置包括：</p>
 
@@ -502,6 +545,7 @@ CUDA_VISIBLE_DEVICES=0 \
                   <li><code>&#45;&#45;load-mode mmap</code>：模型大于聚合快速内存，冷页从本地存储读取；</li>
                   <li><code>&#45;&#45;moe-provider tiered-local-cold-hot-v1</code>：热专家数据保留在 GPU，较冷的数据使用主机内存和本地 SSD；</li>
                   <li><code>&#45;&#45;moe-routing-policy local-cold-no-remote-v1</code>：每个 rank 从本地读取自己的冷权重，而不是从另一台机器获取；</li>
+                  <li><code>&#45;&#45;moe-manual-plan /path/to/hy4-two-rank-plan.prmp</code>：两个 rank 都加载同一份经过校验的层放置计划；</li>
                   <li><code>&#45;&#45;ctx-size 8192 &#45;&#45;batch-size 2 &#45;&#45;ubatch-size 1 &#45;&#45;parallel 1</code>：每次运行一个 8K 上下文请求；</li>
                   <li><code>&#45;&#45;n-predict -1</code>：服务端不设置生成长度上限；</li>
                   <li><code>&#45;&#45;seed 0 &#45;&#45;temp 0 &#45;&#45;top-k 1 &#45;&#45;top-p 1</code>：参考路径使用确定性解码；</li>
@@ -510,7 +554,7 @@ CUDA_VISIBLE_DEVICES=0 \
 
                 <p>实测配置还启用了请求感知调度、热专家缓存、精确预取、路由页面预取与 page cache 填充、后台 staging 和异步复制路径。整个运行过程中，两个 rank 始终使用同一套记录下来的环境变量和启动命令矩阵。</p>
 
-                <h2>7. 预热一次，再逐个测量请求</h2>
+                <h2>8. 预热一次，再逐个测量请求</h2>
 
                 <p>两个 rank 都报告健康后，我们先向 rank 0 发送一次预热请求，再在没有其他并发请求的情况下执行一次正式请求。服务端使用 8K 上下文；除非客户端自行提供 <code>max_tokens</code>，否则允许模型自然完成生成。</p>
 
@@ -531,6 +575,8 @@ CUDA_VISIBLE_DEVICES=0 \
                 <p>它提供的是一条可审视的路径：让分布在两台机器上的五张异构 GPU 汇聚到一个面向客户端的 API。实验的核心思路由此变得具体：没有任何单台设备能在快速内存中容纳完整的 770B 模型，但每台设备都能向同一个协同运行时贡献模型层、显存、系统内存、存储带宽和算力。</p>
 
                 <p>要复现这次运行，双 rank 编排、环境变量、端口、与模型绑定的凭据、适配器、清单和 <code>&#45;&#45;model</code> 值，都必须与同一个支持 STQ1_0 的运行时 build 保持一致。</p>
+
+                <p>本指南仅用于功能预览。未来版本将简化部署流程，并支持自动生成 plan。</p>
               </div>
             </div>
           </article>
