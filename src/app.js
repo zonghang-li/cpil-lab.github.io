@@ -84,9 +84,9 @@ const routeNames = new Set(["home", "playground", "blog"]);
 const routeStorageKey = "prima-route";
 const blogPostStorageKey = "prima-blog-post";
 const blogPostTitles = new Map([
-  ["inside-hy4-770b-experiment", "Inside the PRIMA Hy4 770B Experiment: How We Ran It Across Two Machines"],
+  ["inside-hy4-770b-experiment", "Inside the PRIMA Hy4 preview 770B Experiment: How We Ran It Across Two Machines"],
   ["workstation-already-in-room", "The workstation you need may already be in the room"],
-  ["hunyuan4-770b-local-devices", "Scalability Matters More Than a Bigger Machine: What PRIMA’s Hy4 770B Experiment Reveals About Local AI"],
+  ["hunyuan4-770b-local-devices", "Scalability Matters More Than a Bigger Machine: What PRIMA’s Hy4 preview 770B Experiment Reveals About Local AI"],
 ]);
 const blogPostNames = new Set(blogPostTitles.keys());
 const blogIndexView = document.querySelector("[data-blog-index]");
@@ -96,8 +96,8 @@ const blogLanguageRoots = [...document.querySelectorAll("[data-blog-language-roo
 const blogLanguagePanels = [...document.querySelectorAll("[data-blog-language-panel]")];
 const blogLanguageButtons = [...document.querySelectorAll("[data-blog-language]")];
 const blogPostChineseTitles = new Map([
-  ["inside-hy4-770b-experiment", "解密 PRIMA：如何在两台异构设备上运行 Hy4 770B"],
-  ["hunyuan4-770b-local-devices", "不可忽视的可扩展性：PRIMA 的 Hy4 770B 压测揭示本地 AI 新方向"],
+  ["inside-hy4-770b-experiment", "解密 PRIMA：如何在两台异构设备上运行 Hy4 preview 770B"],
+  ["hunyuan4-770b-local-devices", "不可忽视的可扩展性：PRIMA 的 Hy4 preview 770B 压测揭示本地 AI 新方向"],
 ]);
 let activeBlogLanguage = "en";
 
