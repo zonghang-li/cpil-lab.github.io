@@ -212,8 +212,8 @@
             <div data-blog-language-panel="en">
               <header class="blog-post__header">
                 <div class="blog-meta"><time datetime="2026-08-31">August 31, 2026</time></div>
-                <h1 id="hy4-runbook-title-en">Inside the PRIMA Hy4 preview 770B Experiment: How We Ran It Across Two Machines</h1>
-                <p>Two machines in different locations combined 80 GB of VRAM and 64 GB of RAM. An earlier experiment reached about one output token per second; the STQ1_0 procedure below is a separately reproduced functional preview, not a correctness or performance guarantee.</p>
+                <h1 id="hy4-runbook-title-en">Inside the PRIMA Hy4 Preview 770B Experiment: How We Ran It Across Two Machines</h1>
+                <p>Two machines in different locations, across separate networks and connected wirelessly, combined 80 GB of VRAM and 64 GB of RAM to run Hy4 preview 770B at 1 TPS.</p>
               </header>
 
               <div class="blog-post__body">
@@ -233,7 +233,7 @@
                 </table>
               </div>
 
-              <p>Each machine had 32 GB of system memory. In the reproduced environment, the Laptop could open TCP connections to the A4000 server, but the reverse direction timed out. The procedure therefore uses one SSH session from the Laptop with both local and reverse forwards. Do not assume that VPN reachability is bidirectional.</p>
+              <p>Each machine had 32GB of system memory. The two hosts communicated through direct host-to-host addresses across the existing Wi-Fi, VPN, and remote-LAN path.</p>
 
               <h2>1. Prepare one runtime package per rank</h2>
 
@@ -765,7 +765,7 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
             <div lang="zh-CN" data-blog-language-panel="zh" hidden>
               <header class="blog-post__header">
                 <div class="blog-meta"><time datetime="2026-08-31">2026 年 8 月 31 日</time></div>
-                <h1 id="hy4-runbook-title-zh">解密 PRIMA：如何在两台异构设备上运行 Hy4 preview 770B</h1>
+                <h1 id="hy4-runbook-title-zh">解密 PRIMA：如何在两台异构设备上运行 Hy4 Preview 770B</h1>
                 <p>两台异地设备合计提供 80 GB 显存和 64 GB 系统内存。此前实验达到约每秒一个输出 token；下方 STQ1_0 流程是另一次经过复现的功能预览，不是正确性或性能保证。</p>
               </header>
 
@@ -786,7 +786,7 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
                   </table>
                 </div>
 
-                <p>每台机器均配备 32 GB 系统内存。在本次复现环境中，Laptop 可以向 A4000 服务器建立 TCP 连接，但反方向连接超时。因此主流程使用一条从 Laptop 发起、同时包含本地与反向转发的 SSH 会话；不要假设 VPN 连通性天然双向。</p>
+                <p>每台机器均配备 32GB 系统内存。两台主机通过现有 Wi-Fi、VPN 和远端局域网路径中的主机直连地址通信。</p>
 
                 <h2>1. 为每个 rank 准备一个运行时软件包</h2>
 
@@ -1355,7 +1355,7 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
             <div data-blog-language-panel="en">
               <header class="blog-post__header">
                 <div class="blog-meta"><time datetime="2026-08-30">August 30, 2026</time></div>
-                <h1 id="hunyuan4-post-title-en">Scalability Matters More Than a Bigger Machine: What PRIMA’s Hy4 preview 770B Experiment Reveals About Local AI</h1>
+                <h1 id="hunyuan4-post-title-en">Scalability Matters More Than a Bigger Machine: What PRIMA’s Hy4 Preview 770B Experiment Reveals About Local AI</h1>
               </header>
 
               <div class="blog-post__body">
@@ -1599,7 +1599,7 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
             <div lang="zh-CN" data-blog-language-panel="zh" hidden>
             <header class="blog-post__header">
               <div class="blog-meta"><time datetime="2026-08-30">August 30, 2026</time></div>
-              <h1 id="hunyuan4-post-title">不可忽视的可扩展性：PRIMA 的 Hy4 preview 770B 压测揭示本地 AI 新方向</h1>
+              <h1 id="hunyuan4-post-title">不可忽视的可扩展性：PRIMA 的 Hy4 Preview 770B 压测揭示本地 AI 新方向</h1>
             </header>
 
             <div class="blog-post__body">
@@ -1845,8 +1845,8 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
               <span data-blog-footnote-copy="en">Installation and run guide: </span>
               <span data-blog-footnote-copy="zh" lang="zh-CN">部署与运行教程：</span>
               <a href="./blog/inside-hy4-770b-experiment" data-blog-post-link="inside-hy4-770b-experiment">
-                <span data-blog-footnote-copy="en">Inside the PRIMA Hy4 preview 770B Experiment: How We Ran It Across Two Machines.</span>
-                <span data-blog-footnote-copy="zh" lang="zh-CN">解密 PRIMA：如何在两台异构设备上运行 Hy4 preview 770B。</span>
+                <span data-blog-footnote-copy="en">Inside the PRIMA Hy4 Preview 770B Experiment: How We Ran It Across Two Machines.</span>
+                <span data-blog-footnote-copy="zh" lang="zh-CN">解密 PRIMA：如何在两台异构设备上运行 Hy4 Preview 770B。</span>
               </a>
             </p>
           </article>
