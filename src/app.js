@@ -92,10 +92,13 @@ const blogPostNames = new Set(blogPostTitles.keys());
 const blogIndexView = document.querySelector("[data-blog-index]");
 const blogPostViews = [...document.querySelectorAll("[data-blog-post]")];
 const blogLanguageStorageKey = "prima-blog-language";
-const blogLanguageRoot = document.querySelector("[data-blog-language-root]");
+const blogLanguageRoots = [...document.querySelectorAll("[data-blog-language-root]")];
 const blogLanguagePanels = [...document.querySelectorAll("[data-blog-language-panel]")];
 const blogLanguageButtons = [...document.querySelectorAll("[data-blog-language]")];
-const hy4ChineseTitle = "不可忽视的可扩展性：PRIMA 的 Hy4 770B 压测揭示本地 AI 新方向";
+const blogPostChineseTitles = new Map([
+  ["inside-hy4-770b-experiment", "PRIMA Hy4 770B 实验全记录：我们如何用两台机器运行它"],
+  ["hunyuan4-770b-local-devices", "不可忽视的可扩展性：PRIMA 的 Hy4 770B 压测揭示本地 AI 新方向"],
+]);
 let activeBlogLanguage = "en";
 
 try {
@@ -105,7 +108,7 @@ try {
 }
 
 function blogPostTitle(post) {
-  if (post === "hunyuan4-770b-local-devices" && activeBlogLanguage === "zh") return hy4ChineseTitle;
+  if (activeBlogLanguage === "zh" && blogPostChineseTitles.has(post)) return blogPostChineseTitles.get(post);
   return blogPostTitles.get(post);
 }
 
@@ -121,13 +124,12 @@ function setBlogLanguage(language, { persist = true } = {}) {
     button.setAttribute("aria-pressed", String(button.dataset.blogLanguage === activeBlogLanguage));
   });
 
-  if (blogLanguageRoot) {
-    blogLanguageRoot.lang = activeBlogLanguage === "zh" ? "zh-CN" : "en";
-    blogLanguageRoot.setAttribute(
-      "aria-labelledby",
-      activeBlogLanguage === "zh" ? "hunyuan4-post-title" : "hunyuan4-post-title-en",
-    );
-  }
+  blogLanguageRoots.forEach((root) => {
+    root.lang = activeBlogLanguage === "zh" ? "zh-CN" : "en";
+    const activePanel = root.querySelector(`[data-blog-language-panel="${activeBlogLanguage}"]`);
+    const activeTitle = activePanel?.querySelector("h1[id]");
+    if (activeTitle) root.setAttribute("aria-labelledby", activeTitle.id);
+  });
 
   if (persist) {
     try {
@@ -137,13 +139,14 @@ function setBlogLanguage(language, { persist = true } = {}) {
     }
   }
 
-  if (document.body.dataset.blogPost === "hunyuan4-770b-local-devices") {
-    document.title = `${blogPostTitle("hunyuan4-770b-local-devices")} — Prima Lab`;
+  const activePost = document.body.dataset.blogPost;
+  if (blogPostNames.has(activePost) && blogPostChineseTitles.has(activePost)) {
+    document.title = `${blogPostTitle(activePost)} — Prima Lab`;
   }
 
   // Swapping two long documents can trigger browser scroll anchoring. Keep the
   // reader at the same position, especially when switching languages near the top.
-  void blogLanguageRoot?.offsetHeight;
+  blogLanguageRoots.forEach((root) => void root.offsetHeight);
   if (main) main.scrollTop = mainScrollTop;
   window.scrollTo(0, windowScrollTop);
   requestScrollUpdate();
