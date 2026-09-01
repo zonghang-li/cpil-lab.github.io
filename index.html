@@ -601,7 +601,7 @@ COMMON_ARGS=(
 BASH
 chmod 600 "$STATE/hy4-common.sh"</code></pre>
 
-              <p>In Terminal B on the 4090 Laptop, start rank 1 in the foreground. The retained run had 15,930 MiB GPU memory free and 22.66 GB <code>MemAvailable</code> before launch; the block aborts below conservative reproduced-environment gates of 15,800 MiB and 22.0 GB. Do not stop other users' processes to satisfy them. The wrapper pins the local receipt, plan, and model to file descriptors 200, 201, and 203. A normal plan pathname is not accepted by the current manual-mode contract.</p>
+              <p>In Terminal B on the 4090 Laptop, start rank 1 in the foreground. The retained run had 15,930 MiB GPU memory free and 22.66 GB <code>MemAvailable</code> before launch; the block aborts below conservative reproduced-environment gates of 15,800 MiB and 22.0 GB. The wrapper pins the local receipt, plan, and model to file descriptors 200, 201, and 203. A normal plan pathname is not accepted by the current manual-mode contract.</p>
 
               <pre class="blog-code-block" aria-label="Start Hy4 preview rank 1 on the 4090 Laptop"><code>set &#45;euo pipefail
 umask 077
@@ -1138,7 +1138,7 @@ COMMON_ARGS=(
 BASH
 chmod 600 "$STATE/hy4-common.sh"</code></pre>
 
-                <p>在 4090 Laptop 的终端 B 中以前台方式启动 rank 1。保留复现启动前有 15,930 MiB 可用显存和 22.66 GB <code>MemAvailable</code>；代码块会在低于保守的复现环境 gate（15,800 MiB 和 22.0 GB）时中止。不要为了满足 gate 而停止其他用户的进程。Wrapper 会把本地 receipt、plan 和模型固定到文件描述符 200、201 和 203；当前 manual-mode 合同不接受普通的 plan 路径。</p>
+                <p>在 4090 Laptop 的终端 B 中以前台方式启动 rank 1。保留复现启动前有 15,930 MiB 可用显存和 22.66 GB <code>MemAvailable</code>；代码块会在低于保守的复现环境 gate（15,800 MiB 和 22.0 GB）时中止。Wrapper 会把本地 receipt、plan 和模型固定到文件描述符 200、201 和 203；当前 manual-mode 合同不接受普通的 plan 路径。</p>
 
                 <pre class="blog-code-block" aria-label="在 4090 Laptop 上启动 Hy4 preview rank 1"><code>set &#45;euo pipefail
 umask 077
