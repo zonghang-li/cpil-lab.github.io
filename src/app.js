@@ -1,5 +1,6 @@
 import { presetConversations } from "./preset-conversations.js?v=appended-presets-v2-20260823";
 import { hy4ReplayData } from "./hy4-replay-data-fc83-20260905.js";
+import { qwen36ReplayData } from "./qwen36-replay-data-20260908.js";
 import { renderMarkdownInto } from "./markdown-renderer.js";
 
 document.documentElement.classList.add("js");
@@ -518,6 +519,12 @@ function initMeasuredPlayback() {
   const packetStream = document.querySelector("[data-sim-packet-stream]");
   const simulator = form.closest("[data-simulator]") || form;
   const simulationSection = form.closest("[data-slide]") || simulator;
+  const homeImage = simulationSection.querySelector("[data-sim-home-image]");
+  const originalHomeImage = { src: homeImage?.src, alt: homeImage?.alt };
+  const caseFields = [...simulationSection.querySelectorAll("[data-testbed-field]")]
+    .map((element) => ({ element, original: element.textContent }));
+  const accessibleCards = [...simulationSection.querySelectorAll(".sim-machine-card, .sim-link-map, .sim-telemetry")]
+    .map((element) => ({ element, original: element.getAttribute("aria-label") }));
   const results = [...form.querySelectorAll("[data-sim-result]")].map((panel) => ({
     id: panel.dataset.simResultId,
     panel,
@@ -526,6 +533,8 @@ function initMeasuredPlayback() {
     elapsed: panel.querySelector("[data-sim-result-elapsed]"),
     tokenCount: panel.querySelector("[data-sim-result-token-count]"),
     rateOutput: panel.querySelector("[data-sim-result-rate-output]"),
+    ttftOutput: panel.querySelector("[data-sim-result-ttft]"),
+    tpotOutput: panel.querySelector("[data-sim-result-tpot]"),
     rateOff: Number(panel.dataset.simRateOff || 0),
     rateOn: Number(panel.dataset.simRateOn || 0),
     ttftOff: Number(panel.dataset.simTtftOff || 0),
@@ -548,6 +557,7 @@ function initMeasuredPlayback() {
   const promptOptions = new Map([
     ["testbed-1", Object.entries(hy4ReplayData.prompts).map(([value, replay]) => ({ value, label: replay.prompt }))],
     ["testbed-2", presetConversations.map((preset) => ({ value: preset.id, label: preset.prompt }))],
+    ["testbed-3", presetConversations.map((preset) => ({ value: preset.id, label: preset.prompt }))],
   ]);
   const testbedConfigurations = new Map([
     ["testbed-1", {
@@ -574,10 +584,47 @@ function initMeasuredPlayback() {
       serverVram: "16 GB",
       serverSummary: "Remote LAN · subnet B. GPU server with an Intel Core i7-12700 CPU, one NVIDIA RTX A4000 GPU with 16 GB VRAM, 32 GB system memory, 1 gigabit per second uplink and downlink, and RTT approximately 50 milliseconds.",
     }],
+    ["testbed-3", {
+      label: "TESTBED 3",
+      model: "qwen36-35b-a3b-iq1m",
+      prompt: defaultPrompt,
+      dflash: true,
+      serverImage: `${routeBasePath}/assets/windows-desktop-2080ti.png`,
+      serverImageAlt: "Illustration of a Windows desktop and one RTX 2080 Ti graphics card",
+      serverGpu: "NVIDIA RTX 2080 Ti · GPU 0",
+      serverGpuCount: "1",
+      serverVram: "11 GB",
+      serverSummary: "Windows desktop on the same LAN. Intel Core i9-9900K, 64 GB system memory, one visible RTX 2080 Ti with 11 GB VRAM. Ethernet connection to the router.",
+      fields: {
+        intro: "Compare recorded requests on a MacBook Pro M3, a Windows desktop, and both devices together with PRIMA. Choose a prompt and switch DFlash on or off.",
+        homeLan: "Local LAN · macOS", homeName: "MacBook Pro M3", homeCpu: "Apple M3 Pro",
+        homeMemory: "18 GB unified", homeGpu: "Apple M3 Pro · Metal",
+        homeVramLabel: "GPU memory", homeVram: "Shared with system",
+        homeLinkLabel: "Connection", homeLink: "Wi‑Fi",
+        homeNetworkLabel: "Network", homeNetwork: "Same local LAN",
+        homeLayersLabel: "PRIMA layers", homeLayers: "14 / 40 · head",
+        homeSummary: "MacBook Pro with Apple M3 Pro and 18 GB unified memory. Metal GPU. Wi-Fi connection to the same LAN router as the Windows desktop.",
+        serverLan: "Local LAN · Windows", serverName: "Windows desktop",
+        serverCpu: "Intel Core i9-9900K", serverMemory: "64 GB",
+        serverLinkLabel: "Connection", serverLink: "Ethernet",
+        serverNetworkLabel: "Network", serverNetwork: "Same local LAN",
+        serverLayersLabel: "PRIMA layers", serverLayers: "26 / 40 · worker",
+        networkLeft: "Mac · head", networkCenter: "One local network", networkRight: "Windows · worker",
+        networkSummary: "The Mac connects over Wi-Fi and the Windows desktop over Ethernet to the same LAN router. No WAN or VPN hop is used for inference.",
+        topologyCaption: "Two heterogeneous devices on one LAN. PRIMA partitions the target model across Metal and CUDA. Single-device baselines use CPU expert placement when accelerator memory is insufficient.",
+        homeResultLabel: "MacBook Pro M3 · llama.cpp", serverResultLabel: "Windows desktop · llama.cpp",
+        primaResultLabel: "Mac + Windows · PRIMA",
+        dflashHelp: "Replay independently measured DFlash on or off requests. The random seed is 1234; ordinary server sampling defaults are used and recorded.",
+        disclosure: "Real recorded requests, not live inference. Each panel waits its measured TTFT, then follows the actual token-arrival timeline, including DFlash bursts. Throughput is 1 / request-mean TPOT. Context capacity: 262,144; ordinary sampling; seed: 1234; output: natural EOS, no token cap. Model loading is excluded; prompt processing is included. Device illustrations are illustrative, not photographs of the test machines.",
+        disclosureA11y: "Playback includes first-token latency and recorded inter-token delays. It does not run a model or connect to a device. Pausing or hiding the tab pauses replay time.",
+        boundary: "Recorded request timing includes TTFT. Tokens arriving together remain a burst; no synthetic uniform intervals are added.",
+      },
+    }],
   ]);
   const modelTestbeds = new Map([
     ["hy4-770b-stq1-0", ["testbed-1"]],
     ["qwen38-27b-q8", ["testbed-2"]],
+    ["qwen36-35b-a3b-iq1m", ["testbed-3"]],
   ]);
 
   function makePlaybackTokens(preset) {
@@ -630,15 +677,28 @@ function initMeasuredPlayback() {
   }
 
   function supportsDflash() {
-    return testbedSelect.value === "testbed-2" && model instanceof HTMLSelectElement && model.value === "qwen38-27b-q8";
+    return isRequestTimedTestbed() || (testbedSelect.value === "testbed-2" && model instanceof HTMLSelectElement && model.value === "qwen38-27b-q8");
+  }
+
+  function isRequestTimedTestbed() {
+    return testbedSelect.value === "testbed-3" && model.value === "qwen36-35b-a3b-iq1m";
   }
 
   function getRecordedPrompt() {
+    if (isRequestTimedTestbed()) {
+      return qwen36ReplayData.prompts[prompt.value]?.modes[isDflashEnabled() ? "on" : "off"] || null;
+    }
     if (testbedSelect.value !== "testbed-1" || !(model instanceof HTMLSelectElement) || model.value !== "hy4-770b-stq1-0") return null;
     return hy4ReplayData.prompts[prompt.value] || null;
   }
 
   function hasPlaybackData() {
+    if (isRequestTimedTestbed()) {
+      const measurements = getRecordedPrompt()?.results;
+      return results.every(({ id }) => measurements?.[id]?.events?.length > 1
+        && measurements[id].timeOrigin === "request_submission"
+        && measurements[id].tpotSeconds > 0);
+    }
     return supportsDflash() || Boolean(getRecordedPrompt());
   }
 
@@ -650,6 +710,7 @@ function initMeasuredPlayback() {
   }
 
   function formatReplayTpot(value) {
+    if (!Number.isFinite(value)) return "—";
     const fractionDigits = value < 1 ? 2 : 1;
     return value.toLocaleString("en-US", {
       minimumFractionDigits: fractionDigits,
@@ -686,13 +747,13 @@ function initMeasuredPlayback() {
 
   function syncResultRates() {
     const recordedPrompt = getRecordedPrompt();
-    if (recordedPrompt) {
+    if (recordedPrompt || isRequestTimedTestbed()) {
       results.forEach((result) => {
-        const measurement = recordedPrompt.results[result.id];
-        result.recordedEvents = measurement?.events || null;
+        const measurement = recordedPrompt?.results?.[result.id];
+        result.recordedEvents = measurement?.events || [];
         result.displayTpotSeconds = measurement?.tpotSeconds ?? null;
-        result.ttftMs = 0;
-        result.playbackRate = measurement ? 1 : 0;
+        result.ttftMs = isRequestTimedTestbed() ? (measurement?.ttftSeconds ?? 0) * 1000 : 0;
+        result.playbackRate = measurement ? (isRequestTimedTestbed() ? 1 / measurement.tpotSeconds : 1) : 0;
         result.panel.classList.toggle("is-measurement-missing", !measurement);
       });
       playbackRate = results.find((result) => result.id === "prima")?.playbackRate || 0;
@@ -737,10 +798,11 @@ function initMeasuredPlayback() {
 
   function updateTelemetry() {
     const recordedReplay = Boolean(getRecordedPrompt());
+    const requestTimed = isRequestTimedTestbed();
     const available = hasPlaybackData();
     elapsed.textContent = `${(elapsedMs / 1000).toFixed(1)} s`;
     tokenCount.textContent = playbackState === "idle" || playbackState === "unavailable" ? "0" : `${visibleTokens}`;
-    rate.textContent = recordedReplay
+    rate.textContent = recordedReplay && !requestTimed
       ? `${formatReplayTpot(results.find((result) => result.id === "prima")?.displayTpotSeconds)} s/tok`
       : available
         ? `${formatTokenRate(playbackRate)} tok/s`
@@ -751,14 +813,18 @@ function initMeasuredPlayback() {
       const resultElapsedMs = Math.min(elapsedMs, resultDurationMs);
       result.elapsed.textContent = `${(resultElapsedMs / 1000).toFixed(1)} s`;
       result.tokenCount.textContent = playbackState === "idle" || playbackState === "unavailable" ? "0" : `${result.visibleTokens}`;
-      result.rateOutput.textContent = recordedReplay
+      result.rateOutput.textContent = recordedReplay && !requestTimed
         ? result.displayTpotSeconds
           ? `${formatReplayTpot(result.displayTpotSeconds)} s/tok`
           : "—"
         : available
           ? `${formatTokenRate(result.playbackRate)} tok/s`
           : "—";
-      result.rateOutput.title = recordedReplay ? "Average replay time per output token" : "Measured output rate";
+      result.rateOutput.title = requestTimed ? "1 / request-mean TPOT; TTFT excluded" : recordedReplay ? "Average replay time per output token" : "Measured output rate";
+      if (result.ttftOutput) result.ttftOutput.textContent = requestTimed && result.recordedEvents.length
+        ? `${(result.ttftMs / 1000).toFixed(2)} s` : "—";
+      if (result.tpotOutput) result.tpotOutput.textContent = requestTimed && result.displayTpotSeconds
+        ? `${(result.displayTpotSeconds * 1000).toFixed(1)} ms` : "—";
       const waitingForFirstToken = playbackState === "streaming" && result.playbackRate > 0 && elapsedMs < result.ttftMs;
       result.panel.classList.toggle("is-awaiting-first-token", waitingForFirstToken);
       if (playbackState === "streaming") {
@@ -809,7 +875,7 @@ function initMeasuredPlayback() {
       dflashState.textContent = isDflashEnabled()
         ? active
           ? "ON · playback in progress"
-          : "ON · DFlash2 measurements"
+          : `ON · ${isRequestTimedTestbed() ? "DFlash" : "DFlash2"} measurements`
         : "OFF · standard measurements";
     }
 
@@ -912,6 +978,31 @@ function initMeasuredPlayback() {
     serverGpu.dataset.simGpuCount = configuration.serverGpuCount;
     serverVram.textContent = configuration.serverVram;
     serverSummary.textContent = configuration.serverSummary;
+    simulator.dataset.testbed = resolvedTestbed;
+    const local = resolvedTestbed === "testbed-3";
+    caseFields.forEach(({ element, original }) => {
+      element.textContent = configuration.fields?.[element.dataset.testbedField] ?? original;
+    });
+    accessibleCards.forEach(({ element, original }) => {
+      if (!local) element.setAttribute("aria-label", original);
+      else if (element.classList.contains("sim-machine-card--home")) element.setAttribute("aria-label", "MacBook Pro M3 on the local network");
+      else if (element.classList.contains("sim-machine-card--server")) element.setAttribute("aria-label", "Windows desktop on the local network");
+      else if (element.classList.contains("sim-link-map")) element.setAttribute("aria-label", configuration.fields.networkSummary);
+      else element.setAttribute("aria-label", "Recorded request playback telemetry");
+    });
+    if (homeImage) {
+      homeImage.src = local ? `${routeBasePath}/assets/macbook-pro-m3.png` : originalHomeImage.src;
+      homeImage.alt = local ? "Illustration of a MacBook Pro with Apple M3 Pro" : originalHomeImage.alt;
+    }
+    const wanImage = simulationSection.querySelector("[data-sim-wan-image]");
+    const lanGraphic = simulationSection.querySelector("[data-sim-local-network]");
+    if (wanImage) wanImage.hidden = local;
+    if (lanGraphic) lanGraphic.hidden = !local;
+    const qualityNote = simulationSection.querySelector("[data-sim-quality-note]");
+    if (qualityNote) qualityNote.hidden = !local;
+    form.querySelectorAll("[data-sim-measured-metric]").forEach((element) => { element.hidden = !local; });
+    const draftLabel = form.querySelector("[data-sim-dflash-label]");
+    if (draftLabel) draftLabel.textContent = local ? "DFlash" : "DFlash2";
     setDflashEnabled(configuration.dflash);
     if (resolvedTestbed === "testbed-2") {
       playbackTokens = makePlaybackTokens(presetResponses.get(configuration.prompt) || presetResponses.get(defaultPrompt));
@@ -934,7 +1025,7 @@ function initMeasuredPlayback() {
       setOutputText(result, result.playbackRate === 0 ? "No measured playback for this configuration." : "");
     });
 
-    if (reduceMotion.matches) {
+    if (reduceMotion.matches && !isRequestTimedTestbed()) {
       completePlayback();
       return;
     }
@@ -1045,7 +1136,7 @@ function initMeasuredPlayback() {
   }
 
   function applySimulationMotionPreference() {
-    if (reduceMotion.matches && (playbackState === "streaming" || playbackState === "paused" || playbackState === "suspended")) {
+    if (reduceMotion.matches && !isRequestTimedTestbed() && (playbackState === "streaming" || playbackState === "paused" || playbackState === "suspended")) {
       completePlayback();
     }
   }

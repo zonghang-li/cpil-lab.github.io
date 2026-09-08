@@ -5864,6 +5864,95 @@ h3 {
   }
 }
 
+[data-simulator] [data-sim-local-network][hidden],
+[data-simulator] [data-sim-wan-image][hidden],
+[data-simulator] [data-sim-measured-metric][hidden] {
+  display: none !important;
+}
+
+.sim-quality-note[hidden] {
+  display: none !important;
+}
+
+.simulation-purpose .sim-quality-note {
+  margin-top: 6px;
+  color: var(--muted);
+  font: 450 12px/1.45 "Geist", sans-serif;
+}
+
+.sim-quality-note strong {
+  color: var(--ink);
+}
+
+.sim-quality-note a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+[data-testbed="testbed-3"] .sim-disclaimer {
+  white-space: normal;
+  overflow: visible;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+[data-testbed="testbed-3"] .sim-machine-visual {
+  background: #fff;
+  border-radius: 8px;
+}
+
+[data-testbed="testbed-3"] .sim-machine-visual img {
+  filter: none;
+  mix-blend-mode: multiply;
+}
+
+.sim-local-network {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 112px;
+  padding: 12px 0;
+}
+
+.sim-local-network > div {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font: 600 10px/1.3 "Geist Mono", monospace;
+  white-space: nowrap;
+}
+
+.sim-local-network svg {
+  width: 30px;
+  height: 30px;
+  stroke-width: 1.4;
+}
+
+.sim-local-network .sim-local-router {
+  color: var(--orange);
+}
+
+.sim-local-network > b {
+  flex: 1;
+  min-width: 12px;
+  height: 1px;
+  margin-bottom: 23px;
+  background: var(--line);
+}
+
+[data-testbed="testbed-3"] .sim-telemetry {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 700px) {
+  [data-testbed="testbed-3"] .sim-telemetry {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

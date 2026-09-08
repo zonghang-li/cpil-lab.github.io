@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "selectionPolicy": "median_request_mean_tpot",
+  "captures": {
+    "home": {
+      "off": {
+        "math": ["mac-retest-eos-dflash-off/math"],
+        "cs": ["mac-retest-eos-dflash-off/cs"],
+        "literature": ["mac-retest-eos-dflash-off/literature"]
+      },
+      "on": {
+        "math": ["mac-retest-eos-dflash-on/math"],
+        "cs": ["mac-retest-eos-dflash-on/cs"],
+        "literature": ["mac-retest-eos-dflash-on/literature"]
+      }
+    },
+    "server": {
+      "off": {
+        "math": ["windows-retest-eos-dflash-off/math"],
+        "cs": ["windows-retest-eos-dflash-off/cs"],
+        "literature": ["windows-retest-eos-dflash-off/literature"]
+      },
+      "on": {
+        "math": ["windows-retest-eos-dflash-on/math"],
+        "cs": ["windows-retest-eos-dflash-on/cs"],
+        "literature": ["windows-retest-eos-dflash-on/literature"]
+      }
+    },
+    "prima": {
+      "off": {
+        "math": ["prima-sampled-eos-dflash-off/math"],
+        "cs": ["prima-sampled-eos-dflash-off/cs"],
+        "literature": ["prima-sampled-eos-dflash-off/literature"]
+      },
+      "on": {
+        "math": [
+          "prima-power-check-no-probe-sustained3/math",
+          "prima-power-check-no-probe-sustained3/math-repeat-2",
+          "prima-power-check-no-probe-sustained3/math-repeat-3"
+        ],
+        "cs": [
+          "prima-power-check-no-probe-cs3/cs",
+          "prima-power-check-no-probe-cs3/cs-repeat-2",
+          "prima-power-check-no-probe-cs3/cs-repeat-3"
+        ],
+        "literature": [
+          "prima-power-check-no-probe-sustained3/literature",
+          "prima-power-check-no-probe-sustained3/literature-repeat-2",
+          "prima-power-check-no-probe-sustained3/literature-repeat-3"
+        ]
+      }
+    }
+  }
+}

@@ -18,7 +18,7 @@
     <link rel="preload" as="font" href="./assets/fonts/Geist-Variable.woff2" type="font/woff2" crossorigin />
     <link rel="preload" as="image" href="./assets/hero-topology-v6.webp" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.18.1/dist/katex.min.css" crossorigin="anonymous" />
-    <link rel="stylesheet" href="./src/styles.css?v=prima-hy4-runbook-v59-20260901" />
+    <link rel="stylesheet" href="./src/styles.css?v=qwen36-testbed3-eos-v1-20260908" />
     <title>Prima Lab — Local AI, beyond one device</title>
   </head>
   <body>
@@ -1954,7 +1954,8 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
       <section class="screen screen--simulation" id="simulation" data-slide="simulation" data-route-view="playground" aria-labelledby="simulation-purpose-detail">
         <div class="simulation-intro simulation-intro--playground reveal">
           <div class="simulation-purpose" id="simulation-purpose">
-            <p id="simulation-purpose-detail">Choose a model, testbed, and prompt, then replay real measurements side by side: laptop only, GPU server only, and both devices with PRIMA.</p>
+            <p id="simulation-purpose-detail" data-testbed-field="intro">Choose a model, testbed, and prompt, then replay real measurements side by side: laptop only, GPU server only, and both devices with PRIMA.</p>
+            <p class="sim-quality-note" data-sim-quality-note hidden role="note"><strong>Unedited model output.</strong> This is a timing demo, not an accuracy benchmark. Math and code samples contain errors. <a href="https://github.com/zonghang-li/cpil-lab.github.io/blob/web/docs/benchmarks/qwen36-testbed3.md">Methods, results &amp; limitations</a></p>
           </div>
         </div>
 
@@ -1967,15 +1968,16 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
                   <select id="simulation-model" data-sim-model>
                     <option value="hy4-770b-stq1-0" selected>Hy4-770B Preview · STQ1_0</option>
                     <option value="qwen38-27b-q8">Qwen3.8-27B · Q8</option>
+                    <option value="qwen36-35b-a3b-iq1m">Qwen3.6-35B-A3B · IQ1_M</option>
                   </select>
                 </label>
 
                 <label class="sim-switch" data-sim-dflash-control hidden>
                   <input type="checkbox" role="switch" checked data-sim-dflash aria-describedby="dflash-help" />
                   <span class="sim-switch-track" aria-hidden="true"><b></b></span>
-                  <span><strong>DFlash2</strong><small class="sr-only" data-sim-dflash-state>ON · measured playback available</small></span>
+                  <span><strong data-sim-dflash-label>DFlash2</strong><small class="sr-only" data-sim-dflash-state>ON · measured playback available</small></span>
                 </label>
-                <p class="sim-switch-help sr-only" id="dflash-help">Toggle between the measured DFlash2 on and off rates for this model.</p>
+                <p class="sim-switch-help sr-only" id="dflash-help" data-testbed-field="dflashHelp">Toggle between the measured DFlash2 on and off rates for this model.</p>
               </div>
 
               <label class="sim-testbed-field" for="simulation-testbed">
@@ -2002,61 +2004,68 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
             <figure class="sim-topology sim-topology--devices" aria-labelledby="sim-topology-caption">
             <article class="sim-machine-card sim-machine-card--home" aria-label="Home Laptop in the home network">
               <header class="sim-machine-head">
-                <div><span>Home LAN</span><h3>Home Laptop</h3></div>
+                <div><span data-testbed-field="homeLan">Home LAN</span><h3 data-testbed-field="homeName">Home Laptop</h3></div>
                 <span class="sim-network-badge"><i data-lucide="network" aria-hidden="true"></i>Wireless</span>
               </header>
               <div class="sim-machine-visual sim-machine-visual--laptop">
-                <img src="./assets/home-laptop.webp" alt="Realistic illustration of the Home Laptop" width="900" height="600" />
+                <img src="./assets/home-laptop.webp" alt="Realistic illustration of the Home Laptop" width="900" height="600" data-sim-home-image />
               </div>
               <dl class="sim-machine-specs">
-                <div><dt>CPU</dt><dd>Intel Core Ultra 9 185H</dd></div>
-                <div><dt>System memory</dt><dd>32 GB</dd></div>
-                <div><dt>GPU</dt><dd>NVIDIA RTX 4090 Laptop</dd></div>
-                <div><dt>VRAM</dt><dd>16 GB</dd></div>
-                <div><dt>Uplink</dt><dd>27 Mbps</dd></div>
-                <div><dt>Downlink</dt><dd>145 Mbps</dd></div>
-                <div><dt>RTT</dt><dd>≈ 50 ms</dd></div>
+                <div><dt>CPU</dt><dd data-testbed-field="homeCpu">Intel Core Ultra 9 185H</dd></div>
+                <div><dt>System memory</dt><dd data-testbed-field="homeMemory">32 GB</dd></div>
+                <div><dt>GPU</dt><dd data-testbed-field="homeGpu">NVIDIA RTX 4090 Laptop</dd></div>
+                <div><dt data-testbed-field="homeVramLabel">VRAM</dt><dd data-testbed-field="homeVram">16 GB</dd></div>
+                <div><dt data-testbed-field="homeLinkLabel">Uplink</dt><dd data-testbed-field="homeLink">27 Mbps</dd></div>
+                <div><dt data-testbed-field="homeNetworkLabel">Downlink</dt><dd data-testbed-field="homeNetwork">145 Mbps</dd></div>
+                <div><dt data-testbed-field="homeLayersLabel">RTT</dt><dd data-testbed-field="homeLayers">≈ 50 ms</dd></div>
               </dl>
-              <span class="sr-only">Home network · subnet A. Intel Core Ultra 9 185H CPU. NVIDIA RTX 4090 Laptop GPU with 16 GB VRAM. 32 GB system memory. Laptop uplink 27 Mbps. Laptop downlink 145 Mbps. Laptop RTT approximately 50 milliseconds.</span>
+              <span class="sr-only" data-testbed-field="homeSummary">Home network · subnet A. Intel Core Ultra 9 185H CPU. NVIDIA RTX 4090 Laptop GPU with 16 GB VRAM. 32 GB system memory. Laptop uplink 27 Mbps. Laptop downlink 145 Mbps. Laptop RTT approximately 50 milliseconds.</span>
             </article>
 
             <div class="sim-link-map sim-link-map--generated" aria-label="Wi-Fi wireless access entering a secure logical VPN tunnel through a WAN cloud and terminating at a wired Network Gateway">
-              <img src="./assets/network-path-v6.webp" alt="Wi-Fi entering an encrypted VPN tunnel through a realistic WAN cloud and terminating at a full-size Network Gateway" width="1400" height="437" />
+              <img src="./assets/network-path-v6.webp" alt="Wi-Fi entering an encrypted VPN tunnel through a realistic WAN cloud and terminating at a full-size Network Gateway" width="1400" height="437" data-sim-wan-image />
+              <div class="sim-local-network" data-sim-local-network hidden aria-hidden="true">
+                <div><i data-lucide="laptop"></i><span>Wi‑Fi</span></div>
+                <b></b>
+                <div class="sim-local-router"><i data-lucide="network"></i><span>LAN router</span></div>
+                <b></b>
+                <div><i data-lucide="server"></i><span>Ethernet</span></div>
+              </div>
               <div class="sim-link-legend" aria-hidden="true">
-                <span>Wi‑Fi access</span>
-                <span>WAN · VPN tunnel</span>
-                <span>Network Gateway</span>
+                <span data-testbed-field="networkLeft">Wi‑Fi access</span>
+                <span data-testbed-field="networkCenter">WAN · VPN tunnel</span>
+                <span data-testbed-field="networkRight">Network Gateway</span>
               </div>
               <span class="sim-link-line" data-sim-packet-stream aria-hidden="true"><b></b><b></b><b></b><b></b></span>
-              <span class="sr-only">The Home Laptop enters the VPN tunnel over Wi‑Fi. The encrypted logical tunnel spans the WAN, then terminates at a wired Network Gateway connected to the GPU server.</span>
+              <span class="sr-only" data-testbed-field="networkSummary">The Home Laptop enters the VPN tunnel over Wi‑Fi. The encrypted logical tunnel spans the WAN, then terminates at a wired Network Gateway connected to the GPU server.</span>
             </div>
 
             <article class="sim-machine-card sim-machine-card--server" aria-label="GPU server in the remote local network">
               <header class="sim-machine-head">
-                <div><span>Remote LAN</span><h3>GPU server</h3></div>
+                <div><span data-testbed-field="serverLan">Remote LAN</span><h3 data-testbed-field="serverName">GPU server</h3></div>
                 <span class="sim-network-badge"><i data-lucide="network" aria-hidden="true"></i>Ethernet</span>
               </header>
               <div class="sim-machine-visual sim-machine-visual--server">
                 <img src="./assets/gpu-server-a4000-x4.webp" alt="GPU server tower with four small A4000-class GPU cards beside it" width="900" height="755" data-sim-server-image />
               </div>
               <dl class="sim-machine-specs">
-                <div><dt>CPU</dt><dd>Intel Core i7-12700</dd></div>
-                <div><dt>System memory</dt><dd>32 GB</dd></div>
+                <div><dt>CPU</dt><dd data-testbed-field="serverCpu">Intel Core i7-12700</dd></div>
+                <div><dt>System memory</dt><dd data-testbed-field="serverMemory">32 GB</dd></div>
                 <div><dt>GPU</dt><dd data-sim-server-gpu>NVIDIA RTX A4000 x4</dd></div>
                 <div><dt>VRAM</dt><dd data-sim-server-vram>16 GB x4</dd></div>
-                <div><dt>Uplink</dt><dd>1 Gbps</dd></div>
-                <div><dt>Downlink</dt><dd>1 Gbps</dd></div>
-                <div><dt>RTT</dt><dd>≈ 50 ms</dd></div>
+                <div><dt data-testbed-field="serverLinkLabel">Uplink</dt><dd data-testbed-field="serverLink">1 Gbps</dd></div>
+                <div><dt data-testbed-field="serverNetworkLabel">Downlink</dt><dd data-testbed-field="serverNetwork">1 Gbps</dd></div>
+                <div><dt data-testbed-field="serverLayersLabel">RTT</dt><dd data-testbed-field="serverLayers">≈ 50 ms</dd></div>
               </dl>
               <span class="sr-only" data-sim-server-summary>Remote LAN · subnet B. GPU server with an Intel Core i7-12700 CPU, four NVIDIA RTX A4000 GPUs with 16 GB VRAM each, 32 GB system memory, 1 gigabit per second uplink and downlink, and RTT approximately 50 milliseconds.</span>
             </article>
-            <figcaption class="sr-only" id="sim-topology-caption">Two heterogeneous devices across different subnets. Network figures describe the recorded testbed; token timing comes from the selected historical trace.</figcaption>
+            <figcaption class="sr-only" id="sim-topology-caption" data-testbed-field="topologyCaption">Two heterogeneous devices across different subnets. Network figures describe the recorded testbed; token timing comes from the selected historical trace.</figcaption>
             </figure>
 
             <div class="sim-results" aria-label="Side-by-side inference playback comparison">
               <article class="sim-response-panel" data-sim-result data-sim-result-id="home" data-sim-rate-off="3.6" data-sim-rate-on="6.8" data-sim-ttft-off="3029.83" data-sim-ttft-on="3506.99">
                 <div class="sim-response-head">
-                  <span>Home Laptop · llama.cpp</span>
+                  <span data-testbed-field="homeResultLabel">Home Laptop · llama.cpp</span>
                   <strong data-sim-result-rate-output>5.9 s/tok</strong>
                   <span data-sim-result-status role="status" aria-live="polite">Ready</span>
                 </div>
@@ -2066,12 +2075,14 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
                 <dl class="sim-telemetry" aria-label="Home Laptop playback telemetry">
                   <div><dt>Elapsed</dt><dd data-sim-result-elapsed>0.0 s</dd></div>
                   <div><dt>Output</dt><dd data-sim-result-token-count>0</dd></div>
+                  <div data-sim-measured-metric hidden><dt>TTFT</dt><dd data-sim-result-ttft>—</dd></div>
+                  <div data-sim-measured-metric hidden><dt>Mean TPOT</dt><dd data-sim-result-tpot>—</dd></div>
                 </dl>
               </article>
 
               <article class="sim-response-panel" data-sim-result data-sim-result-id="server" data-sim-rate-off="1.357" data-sim-rate-on="0.786" data-sim-ttft-off="15867" data-sim-ttft-on="17969">
                 <div class="sim-response-head">
-                  <span>GPU server · llama.cpp</span>
+                  <span data-testbed-field="serverResultLabel">GPU server · llama.cpp</span>
                   <strong data-sim-result-rate-output>2.7 s/tok</strong>
                   <span data-sim-result-status role="status" aria-live="polite">Ready</span>
                 </div>
@@ -2081,12 +2092,14 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
                 <dl class="sim-telemetry" aria-label="GPU server playback telemetry">
                   <div><dt>Elapsed</dt><dd data-sim-result-elapsed>0.0 s</dd></div>
                   <div><dt>Output</dt><dd data-sim-result-token-count>0</dd></div>
+                  <div data-sim-measured-metric hidden><dt>TTFT</dt><dd data-sim-result-ttft>—</dd></div>
+                  <div data-sim-measured-metric hidden><dt>Mean TPOT</dt><dd data-sim-result-tpot>—</dd></div>
                 </dl>
               </article>
 
               <article class="sim-response-panel sim-response-panel--prima" data-sim-result data-sim-result-id="prima" data-sim-rate-off="7.4" data-sim-rate-on="15.2" data-sim-ttft-off="1351.73" data-sim-ttft-on="1585.18">
                 <div class="sim-response-head">
-                  <span>Home Laptop + GPU server · PRIMA</span>
+                  <span data-testbed-field="primaResultLabel">Home Laptop + GPU server · PRIMA</span>
                   <strong data-sim-result-rate-output data-sim-rate>0.66 s/tok</strong>
                   <span data-sim-status data-sim-result-status role="status" aria-live="polite">Ready</span>
                 </div>
@@ -2096,6 +2109,8 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
                 <dl class="sim-telemetry" aria-label="PRIMA playback telemetry">
                   <div><dt>Elapsed</dt><dd data-sim-elapsed data-sim-result-elapsed>0.0 s</dd></div>
                   <div><dt>Output</dt><dd data-sim-token-count data-sim-result-token-count>0</dd></div>
+                  <div data-sim-measured-metric hidden><dt>TTFT</dt><dd data-sim-result-ttft>—</dd></div>
+                  <div data-sim-measured-metric hidden><dt>Mean TPOT</dt><dd data-sim-result-tpot>—</dd></div>
                 </dl>
               </article>
             </div>
@@ -2103,10 +2118,10 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
 
           <footer class="sim-disclaimer" id="simulation-disclosure" role="note">
             <strong>Simulation only.</strong>
-            Fixed recorded input, output, and token intervals. No live model, device connection, or sampling occurs. Playback starts at the first visible token; startup and time to first token are not shown.
-            <span class="sr-only">Replays fixed recorded output timing. It does not run a model, start Prima.cpp, connect to either device, or include startup and first-token latency.</span>
+            <span data-testbed-field="disclosure">Fixed recorded input, output, and token intervals. No live model, device connection, or sampling occurs. Playback starts at the first visible token; startup and time to first token are not shown.</span>
+            <span class="sr-only" data-testbed-field="disclosureA11y">Replays fixed recorded output timing. It does not run a model, start Prima.cpp, connect to either device, or include startup and first-token latency.</span>
           </footer>
-          <span class="sr-only" id="simulation-boundary">Configuration-specific historical playback beginning at the first visible token.</span>
+          <span class="sr-only" id="simulation-boundary" data-testbed-field="boundary">Configuration-specific historical playback beginning at the first visible token.</span>
         </div>
       </section>
 
@@ -2175,6 +2190,6 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
     </main>
 
     <script defer src="./vendor/lucide-prima.js"></script>
-    <script type="module" src="./src/app.js?v=hy4-replay-fc83-v31-20260905"></script>
+    <script type="module" src="./src/app.js?v=qwen36-testbed3-eos-v1-20260908"></script>
   </body>
 </html>
