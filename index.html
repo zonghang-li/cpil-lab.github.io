@@ -18,7 +18,7 @@
     <link rel="preload" as="font" href="./assets/fonts/Geist-Variable.woff2" type="font/woff2" crossorigin />
     <link rel="preload" as="image" href="./assets/hero-topology-v6.webp" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.18.1/dist/katex.min.css" crossorigin="anonymous" />
-    <link rel="stylesheet" href="./src/styles.css?v=qwen36-testbed3-eos-v1-20260908" />
+    <link rel="stylesheet" href="./src/styles.css?v=qwen36-room-to-grow-v1-20260908" />
     <title>Prima Lab — Local AI, beyond one device</title>
   </head>
   <body>
@@ -180,6 +180,15 @@
             </header>
 
             <div class="blog-grid" aria-label="Blog articles">
+              <a class="blog-card" href="./blog/more-than-speed" data-blog-post-link="more-than-speed">
+                <div class="blog-card__content">
+                  <div class="blog-meta"><time datetime="2026-09-08">September 8, 2026</time></div>
+                  <h2>Twice the Context, No New Computer</h2>
+                  <p>How a MacBook and the RTX 2080 Ti at home made room for 262K context while bringing generation back toward 40 tok/s.</p>
+                  <span class="blog-card__link">Read story <b aria-hidden="true">→</b></span>
+                </div>
+              </a>
+
               <a class="blog-card" href="./blog/hunyuan4-770b-local-devices" data-blog-post-link="hunyuan4-770b-local-devices">
                 <div class="blog-card__content">
                   <div class="blog-meta"><time datetime="2026-08-30">August 30, 2026</time></div>
@@ -199,6 +208,232 @@
               </a>
             </div>
           </div>
+
+          <article class="blog-post blog-post--longform" lang="en" data-blog-post="more-than-speed" data-blog-language-root aria-labelledby="room-to-grow-title-en" hidden>
+            <div class="blog-post__toolbar">
+              <a class="blog-back" href="./blog" data-blog-index-link><span aria-hidden="true">←</span> All blogs</a>
+              <div class="blog-language-toggle" role="group" aria-label="Article language">
+                <button type="button" data-blog-language="en" aria-pressed="true">EN</button>
+                <button type="button" data-blog-language="zh" aria-pressed="false" lang="zh-CN">中文</button>
+              </div>
+            </div>
+
+            <div data-blog-language-panel="en">
+              <header class="blog-post__header">
+                <div class="blog-meta"><time datetime="2026-09-08">September 8, 2026</time></div>
+                <h1 id="room-to-grow-title-en">Twice the Context, No New Computer: A MacBook Meets an RTX 2080 Ti</h1>
+                <p>We wanted more context, not a slower assistant. An older desktop helped the MacBook keep up.</p>
+              </header>
+
+              <div class="blog-post__body">
+                <blockquote><strong>Could we double the context capacity and stay close to the speed we already liked—without buying another computer?</strong></blockquote>
+
+                <h2>I liked the speed. I wanted more room.</h2>
+                <p>In our <a href="./blog/hunyuan4-770b-local-devices" data-blog-post-link="hunyuan4-770b-local-devices">Hy4 preview 770B experiment</a>, we tried to make a very large model work on hardware we already owned. This time, I did not want a larger model. I wanted more room around the one already running on my MacBook.</p>
+                <p>The machine was a MacBook Pro with an M3 Pro and 18 GB of unified memory. The model was Qwen3.6-35B-A3B, an MoE model whose IQ1_M GGUF occupies about 9.42 GB on disk. With official llama.cpp, DFlash off, and <strong>131,072 tokens of context capacity</strong>, all loaded target inference weights stayed on Metal.</p>
+                <p>On our three short test requests, generation ran at <strong><span data-blog-mac128-rate="literature">41.94</span>–<span data-blog-mac128-rate="math">42.03</span> tok/s</strong>. Roughly 42 tokens a second was a good starting point. I did not want to lose that just to make room for more context.</p>
+                <p>Imagine a conversation that keeps growing as you add papers, code, and project notes. A smaller context budget eventually becomes another thing to manage: what should stay, what should be removed, and what will have to be supplied again? The next question was natural: could I take this deployment from 128K to <strong>262,144 tokens</strong>?</p>
+                <p>Here, 128K means 131,072 and 262K means 262,144: twice the configured capacity. The 128K run is our verified fully Metal-resident starting configuration, not a proof of the Mac’s absolute context limit. The replay requests remained short; this is not a claim that we processed a 262K-token document.</p>
+
+                <h2>The first attempt: give the MacBook the whole 262K</h2>
+                <p>A model file is not the whole memory bill. The runtime also needs KV cache, working buffers, and, when enabled, a speculative draft model and its state. On the Mac, the GPU shares those 18 GB with the CPU and the operating system; there is no separate 18 GB GPU allocation to add on top.</p>
+                <p>For the selected 262K standalone configuration, official llama.cpp kept the Transformer blocks’ non-expert and shared-expert weights on Metal, but assigned the routed experts in 24 of the 40 blocks to CPU computation. The remaining 16 blocks’ routed experts stayed on Metal.</p>
+                <p>The model still ran. All three requests reached EOS. But with DFlash disabled, the recorded generation rates were now around <strong>22–23 tok/s</strong>. We had made room for the larger capacity; in this configuration, generation was roughly half as fast as the starting point.</p>
+                <p>That was not the upgrade I had in mind. I wanted a larger desk, not a longer wait for every answer.</p>
+                <p>This is a comparison of complete deployments, not an experiment isolating context size alone: expert placement changed, and the 128K baseline explicitly placed the input embedding on Metal while the 262K baseline kept llama.cpp’s default placement.</p>
+
+                <h2>Surely the desktop could take over?</h2>
+                <p>Then I remembered the other computer at home: a Windows desktop with a Core i9-9900K, 64 GB of system RAM, and an RTX 2080 Ti with 11 GB of VRAM. An older GPU, but still a useful one. Could it take over the larger-context job?</p>
+                <p>The desktop had far more system RAM than the Mac. The catch was that 64 GB of system RAM did not turn into 64 GB of CUDA memory. In its selected 262K standalone configuration, llama.cpp assigned 34 blocks’ routed experts to CPU computation and kept six on CUDA, while the Transformer non-expert and shared-expert weights stayed on CUDA.</p>
+                <p>It also ran successfully. With DFlash off, the three recorded requests reached roughly <strong>23–26 tok/s</strong>. Moving the whole job to the desktop had not brought us back to the speed we liked on the Mac. Both computers could serve the large-capacity configuration, but both used CPU expert work in these selected baselines.</p>
+                <p>These placements were held constant between DFlash off and on on each standalone host so both modes fit. They are controlled, measured configurations, not a claim that every standalone option was independently tuned to its absolute maximum speed.</p>
+                <blockquote><strong>What if the desktop did not have to replace the MacBook? What if it could help the MacBook grow?</strong></blockquote>
+
+                <h2>Two operating systems. Two GPUs. One model.</h2>
+                <p>That is where PRIMA changed the experiment. Instead of choosing a winner and leaving the other machine idle, we gave each machine part of the same target model: <strong>14 layers on the Mac’s Metal backend, and 26 on the desktop’s CUDA backend</strong>.</p>
+                <figure class="blog-device-pair">
+                  <div class="blog-device-pair__devices">
+                    <div class="blog-device-pair__device">
+                      <img data-blog-image="macbook-pro-m3.png" alt="Illustration of a MacBook Pro" loading="lazy" width="1536" height="1024" />
+                      <strong>MacBook Pro · M3 Pro</strong>
+                      <span>18 GB unified memory</span>
+                      <b>14 target layers · Metal</b>
+                    </div>
+                    <div class="blog-device-pair__device">
+                      <img data-blog-image="windows-desktop-2080ti.png" alt="Illustration of a Windows tower PC" loading="lazy" width="1370" height="1148" />
+                      <strong>Windows desktop · RTX 2080 Ti</strong>
+                      <span>64 GB RAM · 11 GB VRAM</span>
+                      <b>26 target layers · CUDA</b>
+                    </div>
+                  </div>
+                  <figcaption><strong>One distributed target · 262,144 context capacity</strong><span>Same LAN router. Mac on Wi-Fi; Windows on 100 Mbps Ethernet. Device illustrations, not photographs.</span></figcaption>
+                </figure>
+                <p>This was not a matched pair of servers with a specialist interconnect. The Mac used Wi-Fi; the Windows machine’s Ethernet link negotiated only 100 Mbps. Inference stayed on the local network, with no remote cloud or WAN hop.</p>
+                <p>Nor did the network create one flat pool of GPU memory. Each machine kept its model weights locally. PRIMA passed the intermediate results needed to continue the forward computation; the Mac was the head, the Windows desktop its worker. There were not two independent assistants writing two answers.</p>
+                <p>At 262K capacity, <strong>the assigned weights of all 40 target Transformer layers stayed resident across Metal and CUDA</strong>. No routed-expert CPU fallback was needed for those assigned layers. This statement concerns the target layers, not every global tensor in the GGUF.</p>
+                <p>We had added neither a new graphics card nor a new computer. We had changed the unit of deployment.</p>
+
+                <h2>The first gain did not need a draft model</h2>
+                <p>We kept the target model, context capacity, F16 KV cache, and three playground prompts the same. Then we compared the two standalone deployments with the PRIMA pair, with <strong>DFlash disabled everywhere</strong>.</p>
+                <div class="blog-table-wrap" role="region" aria-label="262K context capacity, DFlash off, request generation throughput in tokens per second" tabindex="0">
+                  <table>
+                    <thead><tr><th scope="col">Prompt</th><th scope="col">Mac<br />llama.cpp</th><th scope="col">Windows<br />llama.cpp</th><th scope="col">PRIMA<br />together</th></tr></thead>
+                    <tbody>
+                      <tr><th scope="row">Math</th><td data-blog-rate="math/off/home">22.76</td><td data-blog-rate="math/off/server">23.48</td><td data-blog-rate="math/off/prima"><strong>38.38</strong></td></tr>
+                      <tr><th scope="row">Code</th><td data-blog-rate="cs/off/home">22.13</td><td data-blog-rate="cs/off/server">24.04</td><td data-blog-rate="cs/off/prima"><strong>33.75</strong></td></tr>
+                      <tr><th scope="row">Literature</th><td data-blog-rate="literature/off/home">22.75</td><td data-blog-rate="literature/off/server">26.34</td><td data-blog-rate="literature/off/prima"><strong>36.55</strong></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p>Values are tok/s, calculated as the inverse of each request’s mean time per output token, excluding time to first token. They describe the recorded requests, not compute-only kernel throughput.</p>
+                <p>Across these three samples, PRIMA delivered <strong>1.39–1.63× the Windows baseline and 1.53–1.69× the Mac baseline</strong>. That improvement did not depend on a model-specific speculative drafter. The target itself was distributed.</p>
+                <p>The useful result was not just “two GPUs are faster.” It was that a different placement let us retain accelerator-resident target layers at the larger capacity, and the measured requests were faster than the selected standalone configurations. Communication still cost time; pooling resources did not make that cost disappear.</p>
+
+                <h2>Expansion, without starting over</h2>
+                <p>We started with roughly 42 tok/s at 128K on the Mac. The selected standalone 262K deployments had fallen into the twenties. PRIMA brought the 262K requests back to roughly <strong>34–38 tok/s without a drafter</strong>—much closer to our starting experience, with twice the context capacity.</p>
+                <p>A cramped workbench changes how a job gets done. Sharing the job across two benches can leave the necessary tools within reach of each worker. In this case, the benefit was not pretending system RAM was VRAM. It was distributing the target layers so each accelerator could keep its part resident.</p>
+                <p><strong>“Expansion” here means a larger accelerator-resident deployment across devices, not an exclusive ability to select 262K.</strong> The standalone runs also allocated 262K using CPU experts. We have not established an absolute single-machine context ceiling, nor validated long-document retrieval or near-full-KV generation speed.</p>
+                <p>This is why expansion and acceleration belong in the same story. We were not chasing a speed record on a smaller configuration. We wanted more room without accepting the same large slowdown—and the desktop could contribute to that goal without replacing the laptop.</p>
+
+                <h2>DFlash was an extra lever, not the foundation</h2>
+                <p>Once the distributed target was working, we also tried DFlash, with its draft model on the Mac head. On the selected code request, PRIMA reached <strong><span data-blog-rate="cs/on/prima">43.31</span> tok/s</strong>, with the first token arriving after about <strong><span data-blog-ttft="cs/on/prima">0.36</span> seconds</strong>. That is the latency of this short request after loading and warmup, not the time to read a 262K-token input.</p>
+                <p>For perspective, the Mac alone had delivered <strong><span data-blog-mac128-rate="cs">41.95</span> tok/s</strong> on that code prompt at 128K with DFlash off. In this example, we had doubled the configured context capacity while returning to a similar generation rate, using the desktop already at home. The deployment and DFlash mode changed; this is an end-to-end product comparison, not a claim of an isolated two-device speedup.</p>
+                <div class="blog-table-wrap" role="region" aria-label="PRIMA at 262K capacity with DFlash off and on, tokens per second" tabindex="0">
+                  <table>
+                    <thead><tr><th scope="col">Prompt</th><th scope="col">DFlash off</th><th scope="col">DFlash on</th></tr></thead>
+                    <tbody>
+                      <tr><th scope="row">Math</th><td data-blog-rate="math/off/prima">38.38</td><td data-blog-rate="math/on/prima">37.95</td></tr>
+                      <tr><th scope="row">Code</th><td data-blog-rate="cs/off/prima">33.75</td><td data-blog-rate="cs/on/prima">43.31</td></tr>
+                      <tr><th scope="row">Literature</th><td data-blog-rate="literature/off/prima">36.55</td><td data-blog-rate="literature/on/prima">23.36</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p>The other requests keep that result in perspective: math was similar, while literature was slower with DFlash. “Around 40 tok/s at twice the capacity” describes the result we could approach, not a promise of zero throughput loss on every request. Speculation brings draft computation, memory, and verification costs; it is not an automatic win. Different sampled answers also mean this is not a pure algorithm-only comparison. The playground includes both modes on all three deployments.</p>
+
+                <h2>A replay you can inspect, not a speedometer to take on faith</h2>
+                <p>Each displayed result is a real request that ended naturally at EOS, without an output-token cap. Requests used seed 1234 and server-default sampling rather than a forced temperature. For PRIMA with DFlash, each displayed trace is the middle request by mean TPOT among its declared three candidates—not a timeline assembled from the fastest pieces.</p>
+                <p>Click Run in the playground and the replay first waits for the measured time to first token, then follows the recorded token arrivals, including bursts. It is recorded inference, not a live service. The three inputs contain only 53, 48, and 49 tokens after templating. These small samples, collected at different times, are not a universal speedup guarantee or a long-context quality benchmark.</p>
+                <p><strong>Speed is not answer quality.</strong> All six mathematics answers in the 262K comparison are incorrect, and several code answers have defects. We have kept the outputs unedited. Neither reaching EOS nor having more context capacity proves correctness; these data do not isolate the cause of the errors.</p>
+                <p>The <a href="https://github.com/zonghang-li/cpil-lab.github.io/blob/web/docs/benchmarks/qwen36-testbed3.md">262K measurement notes</a> document placement, sampling, TTFT, the complete result table, known errors, and source provenance. The <a href="https://github.com/zonghang-li/cpil-lab.github.io/blob/web/docs/benchmarks/qwen36-mac-128k-story-baseline.md">Mac 128K baseline notes</a> document the starting point. The <a href="https://github.com/zonghang-li/cpil-lab.github.io/blob/web/src/qwen36-replay-data-20260908.js">public replay dataset</a> retains the 262K outputs and arrival times; the playground continues to compare 262K deployments only.</p>
+
+                <h2>The next upgrade may already be plugged in</h2>
+                <p>The MacBook did not become a larger MacBook. The 2080 Ti did not acquire more VRAM. They remained different computers, with different operating systems, memory layouts, and strengths.</p>
+                <p>What changed was the choice available to their owner. Instead of asking which machine should replace the other, we could ask what each could contribute to the same local AI task.</p>
+                <blockquote><strong>Keep the MacBook. Put the desktop to work. Make room for a bigger context—not a whole new computer.</strong></blockquote>
+                <p>The Hy4 experiment explored the size of the model. This experiment explored the space around it: the memory a larger context allocation asks for, the placement choices it changes, and the throughput we can retain or recover by working across devices.</p>
+                <p>That is the direction PRIMA is building toward. When our requirements grow, replacing the whole machine should not be the only move on the board.</p>
+                <p><a href="./playground" data-route-link="playground">Open the playground →</a> Select <strong>Qwen3.6-35B-A3B (IQ1_M), Testbed 3</strong>, and compare the Mac, Windows desktop, and PRIMA with DFlash off or on.</p>
+              </div>
+            </div>
+
+            <div lang="zh-CN" data-blog-language-panel="zh" hidden>
+              <header class="blog-post__header">
+                <div class="blog-meta"><time datetime="2026-09-08">2026 年 9 月 8 日</time></div>
+                <h1 id="room-to-grow-title-zh">上下文翻倍，不必换机：让 MacBook 和家里的 2080 Ti 搭把手</h1>
+                <p>想要更多上下文，又不想让回答慢一半。我们让家里的旧台式机，帮 MacBook 扩了一次容。</p>
+              </header>
+
+              <div class="blog-post__body">
+                <blockquote><strong>能不能不买新电脑，把上下文容量翻一倍，同时保留接近原来的生成速度？</strong></blockquote>
+
+                <h2>速度已经够顺手，但我想要更多空间</h2>
+                <p>在<a href="./blog/hunyuan4-770b-local-devices" data-blog-post-link="hunyuan4-770b-local-devices">上一次 Hy4 preview 770B 实验</a>里，我们想让手头已有的硬件跑起一个超大模型。这一次，我不想换更大的模型，只想让已经在 MacBook 上跑起来的模型，多一点上下文空间。</p>
+                <p>手边是一台 M3 Pro MacBook Pro，18 GB 统一内存。模型是 Qwen3.6-35B-A3B，IQ1_M 量化后的 GGUF 文件约 9.42 GB。使用官方 llama.cpp、关闭 DFlash，把上下文配置为 <strong>131,072 tokens</strong>，所加载的目标推理权重可以全部留在 Metal 上。</p>
+                <p>三个短请求的实测生成速度是 <strong><span data-blog-mac128-rate="literature">41.94</span>–<span data-blog-mac128-rate="math">42.03</span> tok/s</strong>。每秒大约 42 个 token，这个起点已经不错。我不想仅仅为了给上下文腾地方，就失去这样的速度。</p>
+                <p>设想一下：对话越来越长，还想继续加入论文、代码和项目笔记。上下文预算很快变成另一件需要操心的事：留下哪些，删掉哪些，哪些下次还要重新提供？于是，一个很自然的念头出现了：能不能从 128K，直接拉到 <strong>262,144 tokens</strong>？</p>
+                <p>本文的 128K 指 131,072，262K 指 262,144，配置容量正好翻倍。128K 是本次已验证的目标权重全 Metal 驻留起点，不代表 Mac 上下文的绝对上限。回放仍使用短 prompt，并不是已经输入了一篇 262K tokens 的文档。</p>
+
+                <h2>第一步：直接在 MacBook 上拉到 262K</h2>
+                <p>模型文件并不是完整的内存账单。运行时还需要 KV cache、计算缓冲；如果打开推测解码，还要为草稿模型及其状态腾地方。Mac 的 GPU、CPU 和操作系统共用这 18 GB，不能再额外加上一份“18 GB 显存”。</p>
+                <p>在我们选定的 262K 单机配置中，官方 llama.cpp 将 Transformer 层的非专家和共享专家权重放在 Metal 上，但把 40 层中 24 层的路由专家交给 CPU 计算，其余 16 层的路由专家保留在 Metal 上。</p>
+                <p>模型仍然能跑，三个请求都自然输出到了 EOS。但关闭 DFlash 时，实测速度变成了 <strong>22–23 tok/s</strong> 左右。空间是腾出来了，在这个配置下，生成速度却差不多慢了一半。</p>
+                <p>这不是我原本想要的升级。我想要的是一张更大的桌子，而不是每次回答都要多等一会儿。</p>
+                <p>这里比较的是完整部署方案，并非只改变上下文大小的单变量实验：专家放置发生了变化，128K 基线还显式把输入 embedding 放在 Metal，而 262K 基线保持 llama.cpp 的默认放置。</p>
+
+                <h2>那就让台式机来？</h2>
+                <p>这时，我想起家里还有一台 Windows 台式机：i9-9900K、64 GB 系统内存，以及一张 11 GB 显存的 RTX 2080 Ti。显卡不新了，但仍然能干活。让它来接手大上下文，会不会更合适？</p>
+                <p>台式机的系统内存比 Mac 宽裕得多。但 64 GB 系统内存，不会变成 64 GB CUDA 显存。在选定的 262K 单机配置下，llama.cpp 把 34 层的路由专家交给 CPU 计算，6 层的路由专家留在 CUDA 上；Transformer 层的非专家和共享专家权重仍在 CUDA 上。</p>
+                <p>它也成功跑完了。关闭 DFlash 时，三个请求约为 <strong>23–26 tok/s</strong>。把整件事搬到台式机上，并没有找回我在 Mac 上已经习惯的速度。两台电脑都能服务这个大容量配置，但选定的两组单机方案都承担了 CPU 专家计算。</p>
+                <p>为了让 DFlash 开、关两组都能容纳，我们在每台单机上固定了两组的目标专家放置。这是经过验证的受控配置，不表示每一种单机选项都已分别调到绝对最快。</p>
+                <blockquote><strong>台式机一定要替代 MacBook 吗？它能不能不接管，而是帮 MacBook 扩一次容？</strong></blockquote>
+
+                <h2>两个操作系统，两块 GPU，一个模型</h2>
+                <p>PRIMA 让实验换了一个问法。我们没有选出“胜出的电脑”，再把另一台晾在旁边，而是把同一个目标模型分给它们：<strong>Mac 的 Metal 承担 14 层，Windows 的 CUDA 承担 26 层</strong>。</p>
+                <figure class="blog-device-pair">
+                  <div class="blog-device-pair__devices">
+                    <div class="blog-device-pair__device">
+                      <img data-blog-image="macbook-pro-m3.png" alt="MacBook Pro 笔记本示意插图" loading="lazy" width="1536" height="1024" />
+                      <strong>MacBook Pro · M3 Pro</strong>
+                      <span>18 GB 统一内存</span>
+                      <b>14 层目标模型 · Metal</b>
+                    </div>
+                    <div class="blog-device-pair__device">
+                      <img data-blog-image="windows-desktop-2080ti.png" alt="Windows 塔式台式机示意插图" loading="lazy" width="1370" height="1148" />
+                      <strong>Windows 台式机 · RTX 2080 Ti</strong>
+                      <span>64 GB 内存 · 11 GB 显存</span>
+                      <b>26 层目标模型 · CUDA</b>
+                    </div>
+                  </div>
+                  <figcaption><strong>一个分布式目标模型 · 262,144 上下文容量</strong><span>连接同一路由器。Mac 使用 Wi-Fi，Windows 使用 100 Mbps 有线连接。设备为示意插图，并非实机照片。</span></figcaption>
+                </figure>
+                <p>这不是一对配套服务器，也没有专用高速互联。Mac 连着 Wi-Fi，Windows 的网口只协商到了 100 Mbps。推理流量留在局域网内，没有借助远端云服务，也不绕行广域网。</p>
+                <p>网络当然没有把两台机器变成一块统一寻址的大显存。模型权重各自保存在本机，PRIMA 传递继续前向计算所需的中间结果。Mac 是 head，Windows 是 worker；不是两个助手各写一份答案，而是两台设备完成同一个目标模型的计算。</p>
+                <p>在 262K 容量下，<strong>40 个目标 Transformer 层所分配的权重，全部常驻在两端的 Metal/CUDA 上</strong>，这些层不再需要路由专家回退到 CPU。这里说的是目标层权重，并非 GGUF 中每一个全局张量。</p>
+                <p>我们没有买一张新显卡，也没有买一台新电脑。改变的是部署单位。</p>
+
+                <h2>第一份收益，不需要草稿模型</h2>
+                <p>我们保持相同的目标模型、上下文容量、F16 KV cache 和三个网页 prompt，分别测试两台单机，以及 PRIMA 两机协同。先看最直接的一组：<strong>所有方案都关闭 DFlash</strong>。</p>
+                <div class="blog-table-wrap" role="region" aria-label="262K 上下文容量、DFlash 关闭时的请求生成吞吐，单位 tok/s" tabindex="0">
+                  <table>
+                    <thead><tr><th scope="col">Prompt</th><th scope="col">Mac<br />llama.cpp</th><th scope="col">Windows<br />llama.cpp</th><th scope="col">PRIMA<br />两机协同</th></tr></thead>
+                    <tbody>
+                      <tr><th scope="row">数学</th><td data-blog-rate="math/off/home">22.76</td><td data-blog-rate="math/off/server">23.48</td><td data-blog-rate="math/off/prima"><strong>38.38</strong></td></tr>
+                      <tr><th scope="row">代码</th><td data-blog-rate="cs/off/home">22.13</td><td data-blog-rate="cs/off/server">24.04</td><td data-blog-rate="cs/off/prima"><strong>33.75</strong></td></tr>
+                      <tr><th scope="row">文学</th><td data-blog-rate="literature/off/home">22.75</td><td data-blog-rate="literature/off/server">26.34</td><td data-blog-rate="literature/off/prima"><strong>36.55</strong></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p>表中单位是 tok/s，取每个请求平均输出 token 间隔的倒数，不包含首 token 等待时间。这是实际请求的生成吞吐，不是计算内核单独计时的速度。</p>
+                <p>在这三个样本中，PRIMA 达到了 <strong>Windows 基线的 1.39–1.63 倍、Mac 基线的 1.53–1.69 倍</strong>。这个收益没有依赖某个模型专属的推测草稿，分布式运行的是目标模型本身。</p>
+                <p>值得关注的不只是“两块 GPU 更快了”，而是另一种放置方式让我们在大容量配置下保住了目标层的加速器驻留，实测请求也快于选定的两组单机配置。通信仍然要花时间，资源合起来并不会让这笔成本消失。</p>
+
+                <h2>不是推倒重来，而是在原来的体验上扩容</h2>
+                <p>起点是 Mac 在 128K 下每秒约 42 个 token。拉到 262K，选定的单机方案落到了二十多。PRIMA 把 262K 请求拉回了<strong>不使用草稿也有约 34–38 tok/s</strong> 的水平：上下文容量翻倍，生成速度重新接近原来的体验。</p>
+                <p>拥挤的工作台会改变做事的方式。把任务分到两张工作台上，可以让每个人需要的工具留在手边。这次的意义不是假装系统内存就是显存，而是分担目标层，让两端的加速器各自留住自己负责的部分。</p>
+                <p><strong>这里的“扩容”，是把加速器驻留的部署能力扩展到多台设备，而不是宣称只有 PRIMA 才能设置 262K。</strong> 单机也通过 CPU 专家跑通了 262K。我们没有据此确定单机上下文的绝对上限，也没有验证长文档检索能力或已用 KV 接近满容量时的生成速度。</p>
+                <p>所以，扩容和提速在这里是同一个故事。我们不是要在更小的配置上刷一次速度纪录，而是想要更多空间，又不愿意接受同样明显的减速。台式机可以帮助实现这个目标，而不必替代笔记本。</p>
+
+                <h2>DFlash 是另一根杠杆，不是地基</h2>
+                <p>分布式目标模型跑通后，我们也打开了 DFlash，把草稿模型放在 Mac head 上。在选中的代码请求里，PRIMA 达到 <strong><span data-blog-rate="cs/on/prima">43.31</span> tok/s</strong>，约 <strong><span data-blog-ttft="cs/on/prima">0.36</span> 秒</strong>出现第一个 token。这是加载、预热完成后，该短请求的首 token 延迟，不是读完 262K tokens 输入的时间。</p>
+                <p>作为参照，Mac 单机在 128K、关闭 DFlash 时，同一个代码 prompt 的速度是 <strong><span data-blog-mac128-rate="cs">41.95</span> tok/s</strong>。在这个例子里，我们借助家里已有的台式机，把配置的上下文容量翻了一倍，同时回到了相近的生成速度。部署和 DFlash 模式都发生了变化，这是端到端的产品体验对照，不是孤立的双机加速比。</p>
+                <div class="blog-table-wrap" role="region" aria-label="PRIMA 在 262K 容量下开启和关闭 DFlash 的吞吐，单位 tok/s" tabindex="0">
+                  <table>
+                    <thead><tr><th scope="col">Prompt</th><th scope="col">DFlash 关闭</th><th scope="col">DFlash 开启</th></tr></thead>
+                    <tbody>
+                      <tr><th scope="row">数学</th><td data-blog-rate="math/off/prima">38.38</td><td data-blog-rate="math/on/prima">37.95</td></tr>
+                      <tr><th scope="row">代码</th><td data-blog-rate="cs/off/prima">33.75</td><td data-blog-rate="cs/on/prima">43.31</td></tr>
+                      <tr><th scope="row">文学</th><td data-blog-rate="literature/off/prima">36.55</td><td data-blog-rate="literature/on/prima">23.36</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p>另外两个请求提醒我们不要把它讲成万能开关：数学接近，文学反而更慢。“容量翻倍、速度回到约 40”描述的是我们能接近的效果，不是每个请求都零吞吐损失的保证。草稿计算、内存和目标验证都有成本，开启推测解码并不自动获益；不同采样答案也意味着，这不是只改变算法的纯粹对照。网页保留了三种部署各自开启、关闭 DFlash 的结果。</p>
+
+                <h2>让读者看到过程，而不只是相信一个速度表</h2>
+                <p>每个展示结果都来自真实请求，没有输出 token 上限，直到自然 EOS。请求固定随机种子 1234，不强制指定温度，沿用服务端默认采样。PRIMA 开启 DFlash 的每条展示记录，是各自三次候选请求中按平均 TPOT 选出的中位请求，并不是从最快片段里拼出来的时间线。</p>
+                <p>在 playground 点击 Run 后，回放先等待实测 TTFT，再按照记录的 token 到达时间逐步显示，也保留同批到达的突发节奏。它是实验回放，不是在线推理服务。三个输入经过模板后只有 53、48 和 49 tokens；这些在不同时段采集的小样本，不代表通用加速保证，更不是长上下文质量评测。</p>
+                <p><strong>速度也不等于答案质量。</strong> 262K 对照中的六份数学答案全部有误，部分代码答案也有缺陷。我们保留了未经修改的输出。正常结束、更大的上下文容量，都不能证明答案正确；这些数据也不能单独确定错误成因。</p>
+                <p><a href="https://github.com/zonghang-li/cpil-lab.github.io/blob/web/docs/benchmarks/qwen36-testbed3.md">262K 实验说明</a>记录了权重放置、采样、TTFT、完整结果表、已知错误与源码版本；<a href="https://github.com/zonghang-li/cpil-lab.github.io/blob/web/docs/benchmarks/qwen36-mac-128k-story-baseline.md">Mac 128K 基线说明</a>记录了故事的起点。<a href="https://github.com/zonghang-li/cpil-lab.github.io/blob/web/src/qwen36-replay-data-20260908.js">公开回放数据</a>保留了 262K 输出和到达时间；playground 仍然只展示 262K 部署之间的比较。</p>
+
+                <h2>下一次升级，也许已经插着电了</h2>
+                <p>MacBook 没有变成一台更大的 MacBook，2080 Ti 也没有凭空长出更多显存。它们仍是两台不同的电脑，有不同的操作系统、内存结构和长处。</p>
+                <p>改变的是使用者手里的选择：不再只问谁应该替代谁，而是问，它们各自能为同一个本地 AI 任务贡献什么。</p>
+                <blockquote><strong>MacBook 继续用，台式机搭把手。扩的是上下文，不是新电脑的采购清单。</strong></blockquote>
+                <p>Hy4 实验探索的是模型有多大。这次探索的是模型周围的空间：更大的上下文分配需要什么内存，改变了哪些放置选择，以及两台设备合作后，我们能保留或找回多少吞吐。</p>
+                <p>这正是 PRIMA 想继续推进的方向。需求增长时，整机替换，不应该是唯一的一步棋。</p>
+                <p><a href="./playground" data-route-link="playground">打开 playground →</a> 选择 <strong>Qwen3.6-35B-A3B（IQ1_M）、Testbed 3</strong>，对比 Mac、Windows 台式机与 PRIMA，并切换 DFlash 开关。</p>
+              </div>
+            </div>
+          </article>
 
           <article class="blog-post blog-post--longform blog-post--runbook" lang="en" data-blog-post="inside-hy4-770b-experiment" data-blog-language-root aria-labelledby="hy4-runbook-title-en" hidden>
             <div class="blog-post__toolbar">
@@ -2190,6 +2425,6 @@ jq '.choices[0].message | {content, reasoning_content}' "$RESPONSE"</code></pre>
     </main>
 
     <script defer src="./vendor/lucide-prima.js"></script>
-    <script type="module" src="./src/app.js?v=qwen36-testbed3-eos-v1-20260908"></script>
+    <script type="module" src="./src/app.js?v=qwen36-room-to-grow-v1-20260908"></script>
   </body>
 </html>

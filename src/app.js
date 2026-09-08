@@ -85,6 +85,7 @@ const routeNames = new Set(["home", "playground", "blog"]);
 const routeStorageKey = "prima-route";
 const blogPostStorageKey = "prima-blog-post";
 const blogPostTitles = new Map([
+  ["more-than-speed", "Twice the Context, No New Computer: A MacBook Meets an RTX 2080 Ti"],
   ["inside-hy4-770b-experiment", "Inside the PRIMA Hy4 preview 770B Experiment: How We Ran It Across Two Machines"],
   ["workstation-already-in-room", "The workstation you need may already be in the room"],
   ["hunyuan4-770b-local-devices", "Scalability Matters More Than a Bigger Machine: What PRIMA’s Hy4 preview 770B Experiment Reveals About Local AI"],
@@ -97,6 +98,7 @@ const blogLanguageRoots = [...document.querySelectorAll("[data-blog-language-roo
 const blogLanguagePanels = [...document.querySelectorAll("[data-blog-language-panel]")];
 const blogLanguageButtons = [...document.querySelectorAll("[data-blog-language]")];
 const blogPostChineseTitles = new Map([
+  ["more-than-speed", "上下文翻倍，不必换机：让 MacBook 和家里的 2080 Ti 搭把手"],
   ["inside-hy4-770b-experiment", "解密 PRIMA：如何在两台异构设备上运行 Hy4 preview 770B"],
   ["hunyuan4-770b-local-devices", "不可忽视的可扩展性：PRIMA 的 Hy4 preview 770B 压测揭示本地 AI 新方向"],
 ]);
@@ -520,7 +522,12 @@ function initMeasuredPlayback() {
   const simulator = form.closest("[data-simulator]") || form;
   const simulationSection = form.closest("[data-slide]") || simulator;
   const homeImage = simulationSection.querySelector("[data-sim-home-image]");
-  const originalHomeImage = { src: homeImage?.src, alt: homeImage?.alt };
+  // A blog deep link has already changed history: resolve the HTML asset
+  // against the site root, not against /blog/<slug>.
+  const originalHomeImage = {
+    src: homeImage ? new URL(homeImage.getAttribute("src"), new URL(`${routeBasePath}/`, window.location.origin)).href : undefined,
+    alt: homeImage?.alt,
+  };
   const caseFields = [...simulationSection.querySelectorAll("[data-testbed-field]")]
     .map((element) => ({ element, original: element.textContent }));
   const accessibleCards = [...simulationSection.querySelectorAll(".sim-machine-card, .sim-link-map, .sim-telemetry")]

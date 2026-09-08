@@ -1,0 +1,54 @@
+{
+  "purpose": "Mac starting point for the capacity-expansion story; not playground replay data",
+  "measuredOn": "2026-09-08",
+  "device": "MacBook Pro, M3 Pro, 18 GB unified memory",
+  "engine": "official llama.cpp",
+  "sourceCommit": "9558fa44c92746a58dd07ad1bf0c889715b938a6",
+  "executableSha256": "924efd9a6546036ea927ca6e68cc3c11cbdc81ce9ff8cda241218bccd2df9eee",
+  "targetSha256": "d291e12a0f693b5f14c11bb1278ba43b432b2b6f6c33c7fdaf750c214ff83f28",
+  "contextCapacity": 131072,
+  "dflash": false,
+  "seed": 1234,
+  "outputLimit": null,
+  "cpuMoeLayers": 0,
+  "gpuEmbedding": true,
+  "allLoadedTargetWeightsGpuResident": true,
+  "records": [
+    {
+      "prompt": "math",
+      "inputTokens": 53,
+      "outputTokens": 377,
+      "ttftSeconds": 0.288249875,
+      "tpotSeconds": 0.023795111478723402,
+      "tokensPerSecond": 42.02543875006252,
+      "outputSha256": "23a8e73fd3cb0e95a32da76b08119bb6a9a4a20e5e6257bc6fbfa9a4c3ef7ec6",
+      "tokenIdsSha256": "ba1e614457983e4b8fdfed1bb2dbb00369f455afc3abf90b2b131c5182362621",
+      "captureStatus": "complete_eos",
+      "startedUtc": "2026-09-08T04:36:34.258303+00:00"
+    },
+    {
+      "prompt": "cs",
+      "inputTokens": 48,
+      "outputTokens": 512,
+      "ttftSeconds": 0.278691792,
+      "tpotSeconds": 0.023836084720156556,
+      "tokensPerSecond": 41.95319876314955,
+      "outputSha256": "fe36004dc6f92acf764d539b6b194c8184dad321a48e9f7195aa006a28643aa3",
+      "tokenIdsSha256": "96147c5a14e4587b8579e5f600adbc0625ff4500040593c1e1b773a8214afdff",
+      "captureStatus": "complete_eos",
+      "startedUtc": "2026-09-08T04:36:43.500617+00:00"
+    },
+    {
+      "prompt": "literature",
+      "inputTokens": 49,
+      "outputTokens": 160,
+      "ttftSeconds": 0.290340583,
+      "tpotSeconds": 0.02384457442138365,
+      "tokensPerSecond": 41.93826160735362,
+      "outputSha256": "496ec272998fae150eaa554a557b5170c8d24967326377d814f5fee73301c844",
+      "tokenIdsSha256": "b038a9a8f4ee60a8d439828123f7d0ff5d2260f3791a5a831aed9b48a85f9705",
+      "captureStatus": "complete_eos",
+      "startedUtc": "2026-09-08T04:36:56.036811+00:00"
+    }
+  ]
+}
